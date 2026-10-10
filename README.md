@@ -21,7 +21,7 @@ GitHub Actions 手动执行 Build iOS，先测试再生成 `JM-downloader-unsign
 
 ## 使用
 
-首次进入右上角设置登录。API 域名可填多个 HTTPS 主机，以逗号分隔。代理仅支持无需认证的 HTTP CONNECT 代理（主机、端口），使用系统 Network / URLSession API；SOCKS 可由系统 VPN 提供。网络设置保存后用于新会话；正在传输的任务可暂停再继续以应用新设置。
+首次进入右上角设置登录。API 域名可填多个 HTTPS 主机，以逗号分隔。代理仅支持无需认证的 HTTP CONNECT 代理（主机、端口），使用系统 Network / URLSession API；SOCKS 可由系统 VPN 提供。网络设置保存后重新登录；后台传输代理在下次启动时生效，图片域名在任务暂停再继续时更新。
 
 默认 PDF 在“文件 → 我的 iPhone → JM downloader”。选择其他目录使用系统文件选择器与安全作用域书签；外部云盘不可用时任务显示失败并保留缓存，可重试。删除任务不会删除已导出的 PDF；可在文件 App 自行管理。
 
