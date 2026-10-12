@@ -1,4 +1,4 @@
-# JM downloader 1.6.4 / Build 16
+# JM downloader 1.6.5 / Build 16
 
 原生 SwiftUI / UIKit 漫画下载应用，支持 JMComic 与 PicACG，最低系统版本为 iOS 26.0。
 
