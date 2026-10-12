@@ -19,6 +19,8 @@ bash scripts/build-unsigned-ipa.sh
 
 GitHub Actions 手动执行 Build iOS，先测试再生成 `JM-downloader-unsigned.ipa`。未签名 IPA 需要自行签名后安装。默认不包含开发者证书、个人账号或个人漫画文件。
 
+最近验证：[1.6.6 / Build 17 成功构建](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38271954094)，66 项单元测试、11 项界面测试通过。在该构建的 Artifacts 下载 `JM-downloader-build` 获取 IPA。
+
 ## 使用
 
 首次进入右上角设置登录。API 域名可填多个 HTTPS 主机，以逗号分隔。代理仅支持无需认证的 HTTP CONNECT 代理（主机、端口），使用系统 Network / URLSession API；SOCKS 可由系统 VPN 提供。网络设置保存后重新登录；后台传输代理在下次启动时生效，图片域名在任务暂停再继续时更新。
