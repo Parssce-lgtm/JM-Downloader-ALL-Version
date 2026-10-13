@@ -18,6 +18,7 @@ struct ContentView: View {
             GeometryReader { geometry in
             let layout = AppLayout(width: geometry.size.width, height: geometry.size.height)
             VStack(spacing: 10) {
+                header.padding(.horizontal, layout.sideInset)
                 Picker("浏览类型", selection: $tab) {
                     ForEach(LibraryTab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }.pickerStyle(.segmented).accessibilityIdentifier("libraryTabs").padding(.horizontal, layout.sideInset)
@@ -29,18 +30,7 @@ struct ContentView: View {
                 .ignoresSafeArea(.container, edges: .bottom).background(Color(uiColor: .systemGroupedBackground))
             }
             .navigationTitle("JM downloader").navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Button("JM downloader") {
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                        pageStates[tab]?.scrollToTopRequest += 1
-                    }.font(.headline).foregroundStyle(.primary).buttonStyle(.plain).accessibilityIdentifier("scrollToTop")
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    AppButton("设置", systemImage: "gearshape") { settings = true }
-                        .labelStyle(.iconOnly).accessibilityIdentifier("settings")
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $settings) { SettingsView(store: store) }
             .navigationDestination(isPresented: $logHistory) { LogHistoryView(entries: store.logs) }
             .onChangeCompat(of: store.account) { _, _ in resetPages() }
@@ -53,6 +43,21 @@ struct ContentView: View {
     }
     private func resetPages() {
         pageStates = Dictionary(uniqueKeysWithValues: LibraryTab.allCases.map { ($0, LibraryPageState()) })
+    }
+    private var header: some View {
+        HStack {
+            Color.clear.frame(width: 44, height: 44).accessibilityHidden(true)
+            Spacer(minLength: 0)
+            Button("JM downloader") {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                pageStates[tab]?.scrollToTopRequest += 1
+            }.font(.headline).foregroundStyle(.primary).buttonStyle(.plain).accessibilityIdentifier("scrollToTop")
+            Spacer(minLength: 0)
+            Button { settings = true } label: {
+                Image(systemName: "gearshape").font(.system(size: 22))
+                    .frame(width: 44, height: 44).modifier(HeaderActionStyle())
+            }.buttonStyle(.plain).accessibilityLabel("设置").accessibilityIdentifier("settings")
+        }.frame(minHeight: 48)
     }
 }
 
@@ -679,6 +684,23 @@ private struct LogHistoryView: View {
             }
         }.overlay { if entries.isEmpty { AppEmptyView("暂无提示", systemImage: "text.bubble") } }
             .navigationTitle("提示记录").navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
+    }
+}
+
+private struct HeaderActionStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
+            content.glassEffect(.regular.interactive(), in: Circle())
+        } else { traditional(content) }
+        #else
+        traditional(content)
+        #endif
+    }
+    private func traditional(_ content: Content) -> some View {
+        content.background(Color(uiColor: .secondarySystemGroupedBackground), in: Circle())
+            .overlay { Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.7).allowsHitTesting(false) }
     }
 }
 

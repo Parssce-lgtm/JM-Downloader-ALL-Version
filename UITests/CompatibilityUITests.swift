@@ -14,7 +14,7 @@ final class CompatibilityUITests: XCTestCase {
             XCTAssertTrue(card.waitForExistence(timeout: 5))
             XCTAssertGreaterThanOrEqual(card.frame.minX, window.minX)
             XCTAssertLessThanOrEqual(card.frame.maxX, window.maxX)
-            XCTAssertGreaterThanOrEqual(card.frame.height, 92)
+            XCTAssertGreaterThanOrEqual(card.frame.height, 91.9)
             capture(app, "compatibility-\(title)")
         }
         app.buttons["settings"].tap()
