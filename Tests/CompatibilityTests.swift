@@ -3,6 +3,22 @@ import Combine
 @testable import JMDownloader
 
 final class CompatibilityTests: XCTestCase {
+    @MainActor func testPDFProgressDoesNotInvalidateNavigationButThemeAndAlertsDo() {
+        let store = AppStore(inMemory: true)
+        let navigation = AppNavigationState(store: store)
+        var changes = 0
+        let subscription = navigation.objectWillChange.sink { changes += 1 }
+        store.jobs = [DownloadJob(owner: "fixture", comic: Comic(id: "42", title: "PDF"), state: .exporting)]
+        for count in 1...100 { store.jobs[0].renderedPages = count }
+        XCTAssertEqual(changes, 0)
+        store.preferences.themeColor = "蓝"
+        XCTAssertEqual(changes, 1)
+        store.alert = "验证提示"
+        XCTAssertEqual(changes, 2)
+        store.account = "fixture"
+        XCTAssertEqual(changes, 3)
+        subscription.cancel()
+    }
     func testRequestedPhoneSizesKeepCardsInsideViewport() {
         let sizes: [(CGFloat, CGFloat)] = [(375, 812), (390, 844), (393, 852), (402, 874), (414, 896), (430, 932)]
         for (width, height) in sizes {

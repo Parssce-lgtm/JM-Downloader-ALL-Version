@@ -6,7 +6,8 @@ enum SelectionMode { case none, download, hide }
 enum LibraryTab: String, CaseIterable { case downloads = "下载任务", favorites = "漫画收藏", recommendations = "漫画推荐" }
 
 struct ContentView: View {
-    @ObservedObject var store: AppStore
+    let store: AppStore
+    @ObservedObject var navigation: AppNavigationState
     @State private var settings = false
     @State private var logHistory = false
     @State private var tab: LibraryTab = .favorites
@@ -32,7 +33,7 @@ struct ContentView: View {
             .navigationTitle("JM downloader").navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $settings) { SettingsView(store: store) }
-            .navigationDestination(isPresented: $logHistory) { LogHistoryView(entries: store.logs) }
+            .navigationDestination(isPresented: $logHistory) { LogHistoryView(store: store) }
             .onChangeCompat(of: store.account) { _, _ in resetPages() }
             .onChangeCompat(of: store.platform) { _, _ in resetPages() }
             .alert("提示", isPresented: Binding(get: { store.alert != nil && !settings }, set: { if !$0 && !settings { store.alert = nil } })) {
@@ -168,7 +169,6 @@ private struct LibraryModuleView: View {
     @State private var downloadAnchor: String?
     @State private var pendingDownloads: [Comic] = []
     @State private var pendingResume: UUID?
-    @State private var cardWidth: CGFloat = 0
     @Environment(\.appLayout) private var layout
     @FocusState private var searchFocused: Bool
 
@@ -208,10 +208,6 @@ private struct LibraryModuleView: View {
             if tab == .downloads { queuePane }
             else { libraryPane }
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(GeometryReader { geometry in
-                Color.clear.preference(key: CardWidthKey.self, value: max(0, geometry.size.width - layout.sideInset * 2))
-            })
-            .onPreferenceChange(CardWidthKey.self) { cardWidth = $0 }
             .scrollDismissesKeyboard(.interactively)
             .contentShape(Rectangle())
             .accessibilityHidden(!isActive)
@@ -400,9 +396,9 @@ private struct LibraryModuleView: View {
             .opacity(tab == .recommendations && store.isPendingDislike(comic) ? 0.45 : 1)
             .accessibilityElement(children: .contain).accessibilityIdentifier("comicCard-" + comic.id)
             .accessibilityValue(tab == .recommendations && store.isPendingDislike(comic) ? "已标记不喜欢，刷新后隐藏" : "")
-            .contentShape(Rectangle()).onTapGesture(coordinateSpace: CoordinateSpace.local) { location in
+            .contentShape(Rectangle()).appTapAtLocation { location in
                 if mode != .none { toggle(comic.id) }
-                else if location.x <= cardWidth * 0.8 { previewComic = comic }
+                else if location.x <= layout.cardWidth * 0.8 { previewComic = comic }
             }
             .contextMenu { comicMenu(comic, anchor: "library:" + DownloadCatalog.key(comic)) }
             .popover(isPresented: deletionBinding("library:" + DownloadCatalog.key(comic)), attachmentAnchor: .rect(.bounds)) { cardActionContent }
@@ -493,9 +489,9 @@ private struct LibraryModuleView: View {
             }
         }.padding(12).frame(minHeight: 92).modifier(ComicCardStyle())
             .accessibilityElement(children: .contain).accessibilityIdentifier("jobCard-" + job.comic.id)
-            .contentShape(Rectangle()).onTapGesture(coordinateSpace: CoordinateSpace.local) { location in
+            .contentShape(Rectangle()).appTapAtLocation { location in
                 if mode != .none { toggle(job.comic.id) }
-                else if location.x <= cardWidth * 0.8 { previewComic = job.comic }
+                else if location.x <= layout.cardWidth * 0.8 { previewComic = job.comic }
             }
             .contextMenu {
                 if job.state.isRunning { AppButton("暂停下载", systemImage: "pause") { store.engine.pause(job.id) } }
@@ -675,14 +671,14 @@ private struct JobProgressBar: View {
 }
 
 private struct LogHistoryView: View {
-    let entries: [LogEntry]
+    @ObservedObject var store: AppStore
     var body: some View {
-        List(entries) { entry in
+        List(store.logs) { entry in
             VStack(alignment: .leading, spacing: 5) {
                 Text(entry.text)
                 Text(entry.date, style: .time).font(.caption).foregroundStyle(.secondary)
             }
-        }.overlay { if entries.isEmpty { AppEmptyView("暂无提示", systemImage: "text.bubble") } }
+        }.overlay { if store.logs.isEmpty { AppEmptyView("暂无提示", systemImage: "text.bubble") } }
             .navigationTitle("提示记录").navigationBarTitleDisplayMode(.inline)
             .toolbar(.visible, for: .navigationBar)
     }

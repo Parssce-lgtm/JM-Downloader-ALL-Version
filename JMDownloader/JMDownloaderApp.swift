@@ -16,13 +16,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct JMDownloaderApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @StateObject private var store = AppStore.shared
+    private let store = AppStore.shared
+    @StateObject private var navigation = AppNavigationState(store: AppStore.shared)
     @Environment(\.scenePhase) private var scenePhase
     var body: some Scene {
         WindowGroup {
-            ContentView(store: store)
-                .tint(store.preferences.accent)
-                .preferredColorScheme(store.preferences.colorScheme)
+            ContentView(store: store, navigation: navigation)
+                .tint(navigation.configuration.preferences.accent)
+                .preferredColorScheme(navigation.configuration.preferences.colorScheme)
                 .task { store.start() }
                 .onChangeCompat(of: scenePhase) { _, phase in
                     if phase == .active { store.becameActive() }

@@ -1,5 +1,25 @@
 import SwiftUI
 import UIKit
+import Combine
+
+struct AppViewConfiguration: Equatable {
+    let preferences: Preferences
+    let account: String
+    let alert: String?
+}
+
+// Progress updates belong to the page. Rebuilding the native pager at every
+// PDF tick can interrupt its in-flight paging animation.
+@MainActor final class AppNavigationState: ObservableObject {
+    @Published private(set) var configuration: AppViewConfiguration
+    private var subscription: AnyCancellable?
+    init(store: AppStore) {
+        configuration = AppViewConfiguration(preferences: store.preferences, account: store.account, alert: store.alert)
+        subscription = store.$preferences.combineLatest(store.$account, store.$alert)
+            .map { AppViewConfiguration(preferences: $0, account: $1, alert: $2) }
+            .removeDuplicates().dropFirst().sink { [weak self] in self?.configuration = $0 }
+    }
+}
 
 enum AppAppearance {
     static var forceTraditional: Bool {
@@ -24,10 +44,6 @@ struct AppLayout: Equatable {
     var sideInset: CGFloat { contentWidth <= 375 ? 12 : 16 }
     var cardWidth: CGFloat { max(0, contentWidth - sideInset * 2) }
     var previewHeight: CGFloat { max(140, min(420, height * 0.65)) }
-}
-struct CardWidthKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 private struct AppLayoutKey: EnvironmentKey {
     static let defaultValue = AppLayout(width: 390, height: 750)
@@ -82,6 +98,10 @@ private struct ChangeCompatibility<Value: Equatable>: ViewModifier {
 
 enum AppFeedback { case success, error }
 extension View {
+    @ViewBuilder func appTapAtLocation(_ action: @escaping (CGPoint) -> Void) -> some View {
+        if #available(iOS 17.0, *) { onTapGesture(coordinateSpace: .local, perform: action) }
+        else { onTapGesture(coordinateSpace: CoordinateSpace.local, perform: action) }
+    }
     @ViewBuilder func appHideBottomEdgeEffect() -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *) { scrollEdgeEffectHidden(true, for: .bottom) }
