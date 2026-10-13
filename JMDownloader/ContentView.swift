@@ -206,7 +206,6 @@ private struct LibraryModuleView: View {
             else { libraryPane }
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
             .scrollDismissesKeyboard(.interactively)
-            .contentShape(Rectangle())
             .accessibilityHidden(!isActive)
             .sheet(item: $previewComic) { CoverPreview(comic: $0, preferences: store.preferences) }
             .onDisappear { dismissTransientControls() }
@@ -254,6 +253,8 @@ private struct LibraryModuleView: View {
                     Text("搜索：" + submittedQuery).lineLimit(1).foregroundStyle(.secondary)
                     Spacer()
                     Button(tab == .recommendations ? "返回推荐" : "返回收藏") { exitSearch() }
+                        .buttonStyle(.plain).foregroundStyle(store.preferences.accent)
+                        .fixedSize().contentShape(Rectangle())
                         .accessibilityIdentifier("exitComicSearch")
                 }.font(.caption)
             }

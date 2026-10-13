@@ -81,7 +81,10 @@ final class CompatibilityUITests: XCTestCase {
         app.buttons["完成"].tap()
         XCTAssertTrue(app.buttons["exitComicSearch"].waitForExistence(timeout: 5))
         capture(app, "search-preserved-multiple-exact-tags")
-        app.buttons["exitComicSearch"].tap()
+        let exit = app.buttons["返回推荐"]
+        XCTAssertLessThan(exit.frame.width, app.windows.firstMatch.frame.width / 2)
+        XCTAssertLessThan(exit.frame.height, 60)
+        exit.tap()
         XCTAssertTrue(app.staticTexts["等待继续的漫画"].waitForExistence(timeout: 5))
     }
     @MainActor private func capture(_ app: XCUIApplication, _ name: String) {
