@@ -1,0 +1,60 @@
+import Foundation
+import CryptoKit
+
+/// Complete tags survive refreshes, session renewal and process termination.
+/// Small per-comic records avoid rewriting a growing catalog for every result.
+actor ComicTagCache {
+    private struct Record: Codable { let key: String; let tags: [String] }
+    private let directory: URL?
+    private var values: [String: [String]] = [:]
+    init(directory: URL? = nil) { self.directory = directory }
+    nonisolated static func persistent(account: String, root: URL? = nil) -> ComicTagCache {
+        let storageRoot = root ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("JMDownloader/ComicTags-v1", isDirectory: true)
+        return ComicTagCache(directory: storageRoot.appendingPathComponent(digest(account), isDirectory: true))
+    }
+    nonisolated private static func digest(_ value: String) -> String {
+        SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+    private func file(_ key: String) -> URL? { directory?.appendingPathComponent(Self.digest(key) + ".json") }
+    func tags(for comic: Comic) -> [String]? {
+        let key = DownloadCatalog.key(comic)
+        if let tags = values[key] { return tags }
+        guard let file = file(key), let data = try? Data(contentsOf: file),
+              let record = try? JSONDecoder().decode(Record.self, from: data), record.key == key else { return nil }
+        values[key] = record.tags
+        return record.tags
+    }
+    func store(_ tags: [String], for comic: Comic) {
+        let key = DownloadCatalog.key(comic)
+        guard values[key] != tags else { return }
+        values[key] = tags
+        guard let directory, let file = file(key) else { return }
+        // Cache IO stays on this actor, outside the UI actor. Disk failure must
+        // not discard a valid server response; the session still keeps its tags.
+        do {
+            try DownloadStorage.prepare(directory)
+            try JSONEncoder().encode(Record(key: key, tags: tags)).write(to: file, options: .atomic)
+        } catch { }
+    }
+    func restoring(_ comics: [Comic]) -> [Comic] {
+        comics.map { comic in
+            var value = comic
+            if let tags = tags(for: comic) { value.tags = tags; value.tagsVerified = true }
+            return value
+        }
+    }
+}
+
+enum ComicSearchQuery: Equatable, Sendable {
+    case text(String), tag(String)
+    init(_ value: String) {
+        let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        self = value.hasPrefix("#") || value.hasPrefix("＃")
+            ? .tag(String(value.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines)) : .text(value)
+    }
+    static func hasTag(_ comic: Comic, _ tag: String) -> Bool {
+        let expected = RecommendationRanking.normalized(tag)
+        return !expected.isEmpty && comic.tags.contains { RecommendationRanking.normalized($0) == expected }
+    }
+}

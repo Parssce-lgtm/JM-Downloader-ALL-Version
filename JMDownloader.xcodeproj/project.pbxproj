@@ -1,0 +1,807 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+
+	};
+	objectVersion = 56;
+	objects = {
+		110158753DEE68AFE509DBFD = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/AppCompatibility.swift;
+			sourceTree = "<group>";
+		};
+		989F23C005CF3D74E151C7C8 = {
+			isa = PBXBuildFile;
+			fileRef = 110158753DEE68AFE509DBFD;
+		};
+		55F99B8953F56495F87C6869 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/AppStore.swift;
+			sourceTree = "<group>";
+		};
+		3B7F4F2EBF7563BD03D42F05 = {
+			isa = PBXBuildFile;
+			fileRef = 55F99B8953F56495F87C6869;
+		};
+		DA4F94D9A76A5F043FD1BBF9 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/BackgroundWork.swift;
+			sourceTree = "<group>";
+		};
+		147F6F8E8366B1C7371312B4 = {
+			isa = PBXBuildFile;
+			fileRef = DA4F94D9A76A5F043FD1BBF9;
+		};
+		7ACA46F17D99F3F15039315A = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/ComicTagCache.swift;
+			sourceTree = "<group>";
+		};
+		9EAF4F8253E5D5A9E4414A77 = {
+			isa = PBXBuildFile;
+			fileRef = 7ACA46F17D99F3F15039315A;
+		};
+		FD514F54DA5BC5136EA645FE = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/ConcurrentLoad.swift;
+			sourceTree = "<group>";
+		};
+		7B7A05B7B8F32A4B2A9A31CC = {
+			isa = PBXBuildFile;
+			fileRef = FD514F54DA5BC5136EA645FE;
+		};
+		F7499FB7CA80951141CADF12 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/ContentView.swift;
+			sourceTree = "<group>";
+		};
+		FBE2B6DF6A640D5C032AE2A6 = {
+			isa = PBXBuildFile;
+			fileRef = F7499FB7CA80951141CADF12;
+		};
+		3DFD120113DB97D88FEF8C0E = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/CoverCache.swift;
+			sourceTree = "<group>";
+		};
+		9303A4DB2C878E1679C1E532 = {
+			isa = PBXBuildFile;
+			fileRef = 3DFD120113DB97D88FEF8C0E;
+		};
+		DD60D823C0D9ED7DBA98A51E = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/DownloadCatalog.swift;
+			sourceTree = "<group>";
+		};
+		9C4478C16253785935A06596 = {
+			isa = PBXBuildFile;
+			fileRef = DD60D823C0D9ED7DBA98A51E;
+		};
+		808AABB4F12BB6728AEC7CA2 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/DownloadDirectory.swift;
+			sourceTree = "<group>";
+		};
+		F886D950D71F060E2010F683 = {
+			isa = PBXBuildFile;
+			fileRef = 808AABB4F12BB6728AEC7CA2;
+		};
+		DBEAF30AA06445A447920E66 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/DownloadEngine.swift;
+			sourceTree = "<group>";
+		};
+		3AB8ACD6B9A7E54A5733961D = {
+			isa = PBXBuildFile;
+			fileRef = DBEAF30AA06445A447920E66;
+		};
+		7B9FFAFBE0975BA4F7F69154 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/DownloadStorage.swift;
+			sourceTree = "<group>";
+		};
+		B1D3F929770A2BE7EFBA970F = {
+			isa = PBXBuildFile;
+			fileRef = 7B9FFAFBE0975BA4F7F69154;
+		};
+		AEDB0E5AA26C36F06608F3E9 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/ImagePipeline.swift;
+			sourceTree = "<group>";
+		};
+		A58280FD664BED759D336F39 = {
+			isa = PBXBuildFile;
+			fileRef = AEDB0E5AA26C36F06608F3E9;
+		};
+		C937ACBC751EF7DC708E794A = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/JMAPI.swift;
+			sourceTree = "<group>";
+		};
+		1D20A12D73496F41AAEA4ADE = {
+			isa = PBXBuildFile;
+			fileRef = C937ACBC751EF7DC708E794A;
+		};
+		00F19FBB4AE920D7041D668C = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/JMCrypto.swift;
+			sourceTree = "<group>";
+		};
+		27F00926F5DDF216583B41E9 = {
+			isa = PBXBuildFile;
+			fileRef = 00F19FBB4AE920D7041D668C;
+		};
+		B2B37580DAF83770189FC1D6 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/JMDownloaderApp.swift;
+			sourceTree = "<group>";
+		};
+		DCBE6CE1A7E901141DF9BAF8 = {
+			isa = PBXBuildFile;
+			fileRef = B2B37580DAF83770189FC1D6;
+		};
+		EF8B1193C4FF37254AFF6417 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/LibraryLoading.swift;
+			sourceTree = "<group>";
+		};
+		5527B16242D89C4A2487E1DC = {
+			isa = PBXBuildFile;
+			fileRef = EF8B1193C4FF37254AFF6417;
+		};
+		144A73020966083443F8DB77 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/MediaRequest.swift;
+			sourceTree = "<group>";
+		};
+		44DA210812668196B02503D5 = {
+			isa = PBXBuildFile;
+			fileRef = 144A73020966083443F8DB77;
+		};
+		8FDE14F8C2A486D551410EB0 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/Models.swift;
+			sourceTree = "<group>";
+		};
+		308F56AB77685418915DE102 = {
+			isa = PBXBuildFile;
+			fileRef = 8FDE14F8C2A486D551410EB0;
+		};
+		C5BBDA64B6A7CE7730333AA0 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/NativeLibraryPager.swift;
+			sourceTree = "<group>";
+		};
+		48874BE3E4A11EEB849ADAB3 = {
+			isa = PBXBuildFile;
+			fileRef = C5BBDA64B6A7CE7730333AA0;
+		};
+		4F209D1498E716D5142100C3 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/NetworkDiagnostics.swift;
+			sourceTree = "<group>";
+		};
+		208D05661CD0433CE479A7CB = {
+			isa = PBXBuildFile;
+			fileRef = 4F209D1498E716D5142100C3;
+		};
+		6E16014056E234694026D02F = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/PicaAPI.swift;
+			sourceTree = "<group>";
+		};
+		D8CEE9C6B5EB379765094006 = {
+			isa = PBXBuildFile;
+			fileRef = 6E16014056E234694026D02F;
+		};
+		08F0036AB5B66B3CD4692451 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/RecommendationRanking.swift;
+			sourceTree = "<group>";
+		};
+		C6AD71BA983742CC1E1EDECA = {
+			isa = PBXBuildFile;
+			fileRef = 08F0036AB5B66B3CD4692451;
+		};
+		3B61EC68470839F3C64219C1 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/SecureStore.swift;
+			sourceTree = "<group>";
+		};
+		16E3C2483D6CD800E9D99F2A = {
+			isa = PBXBuildFile;
+			fileRef = 3B61EC68470839F3C64219C1;
+		};
+		ADF949128FE68E3038D2AC93 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/SessionVault.swift;
+			sourceTree = "<group>";
+		};
+		4E8DC2F79EAAC91D9C4A707A = {
+			isa = PBXBuildFile;
+			fileRef = ADF949128FE68E3038D2AC93;
+		};
+		332BB308451D781EC6FBD752 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/SettingsView.swift;
+			sourceTree = "<group>";
+		};
+		9C4734BCB12A025D0C0138EB = {
+			isa = PBXBuildFile;
+			fileRef = 332BB308451D781EC6FBD752;
+		};
+		C7BA53C5B128623E9214B741 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/SnapshotPersistence.swift;
+			sourceTree = "<group>";
+		};
+		AE2849F799CA57B856661FC5 = {
+			isa = PBXBuildFile;
+			fileRef = C7BA53C5B128623E9214B741;
+		};
+		E37AF3F08F7393A6B90D962E = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/ThemeSettingsView.swift;
+			sourceTree = "<group>";
+		};
+		D8CBEB5C530A6213F630CE81 = {
+			isa = PBXBuildFile;
+			fileRef = E37AF3F08F7393A6B90D962E;
+		};
+		5814C0FF0DDB34B58CB1375B = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = JMDownloader/UIFixture.swift;
+			sourceTree = "<group>";
+		};
+		6BFD32E902723CD487723DED = {
+			isa = PBXBuildFile;
+			fileRef = 5814C0FF0DDB34B58CB1375B;
+		};
+		3494FADA2E0FCBB88C823CDB = {
+			isa = PBXFileReference;
+			lastKnownFileType = folder.assetcatalog;
+			path = JMDownloader/Assets.xcassets;
+			sourceTree = "<group>";
+		};
+		FB90684E69A6C96ED866993E = {
+			isa = PBXBuildFile;
+			fileRef = 3494FADA2E0FCBB88C823CDB;
+		};
+		8D52CB676D5A996AE1197F0D = {
+			isa = PBXFileReference;
+			lastKnownFileType = text;
+			path = THIRD_PARTY_NOTICES.md;
+			sourceTree = "<group>";
+		};
+		F1A0BF4BD3EF4D308755E3BE = {
+			isa = PBXBuildFile;
+			fileRef = 8D52CB676D5A996AE1197F0D;
+		};
+		CE8A5C22FFF44D7AFBF62D29 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (989F23C005CF3D74E151C7C8, 3B7F4F2EBF7563BD03D42F05, 147F6F8E8366B1C7371312B4, 9EAF4F8253E5D5A9E4414A77, 7B7A05B7B8F32A4B2A9A31CC, FBE2B6DF6A640D5C032AE2A6, 9303A4DB2C878E1679C1E532, 9C4478C16253785935A06596, F886D950D71F060E2010F683, 3AB8ACD6B9A7E54A5733961D, B1D3F929770A2BE7EFBA970F, A58280FD664BED759D336F39, 1D20A12D73496F41AAEA4ADE, 27F00926F5DDF216583B41E9, DCBE6CE1A7E901141DF9BAF8, 5527B16242D89C4A2487E1DC, 44DA210812668196B02503D5, 308F56AB77685418915DE102, 48874BE3E4A11EEB849ADAB3, 208D05661CD0433CE479A7CB, D8CEE9C6B5EB379765094006, C6AD71BA983742CC1E1EDECA, 16E3C2483D6CD800E9D99F2A, 4E8DC2F79EAAC91D9C4A707A, 9C4734BCB12A025D0C0138EB, AE2849F799CA57B856661FC5, D8CBEB5C530A6213F630CE81, 6BFD32E902723CD487723DED,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7D94B802A24925F00F4B7AD8 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EE916712BC9CF6E550361C6E = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (FB90684E69A6C96ED866993E, F1A0BF4BD3EF4D308755E3BE,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C21BF66B482AA5BD4BA2B553 = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.application;
+			path = JMDownloader.app;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		4E13EA80C54E13DFFD9105DB = {
+			isa = XCBuildConfiguration;
+			name = Debug;
+			buildSettings = {
+				SWIFT_VERSION = 5.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				MARKETING_VERSION = 1.6.6;
+				CURRENT_PROJECT_VERSION = 21;
+				SWIFT_STRICT_CONCURRENCY = targeted;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = app.jmdownloader.jmdownloader;
+				INFOPLIST_FILE = JMDownloader/Info.plist;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = (IconBlue, IconMono, IconPink, IconGreen,);
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks",);
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				ENABLE_TESTABILITY = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+			};
+		};
+		D77CEC7A2A2B79D0A47E2D1F = {
+			isa = XCBuildConfiguration;
+			name = Release;
+			buildSettings = {
+				SWIFT_VERSION = 5.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				MARKETING_VERSION = 1.6.6;
+				CURRENT_PROJECT_VERSION = 21;
+				SWIFT_STRICT_CONCURRENCY = targeted;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = app.jmdownloader.jmdownloader;
+				INFOPLIST_FILE = JMDownloader/Info.plist;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = (IconBlue, IconMono, IconPink, IconGreen,);
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks",);
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+		};
+		5D6966DA49C6E6FF6468B58B = {
+			isa = XCConfigurationList;
+			buildConfigurations = (4E13EA80C54E13DFFD9105DB, D77CEC7A2A2B79D0A47E2D1F,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		45BAEADA330D65E259746E8A = {
+			isa = PBXNativeTarget;
+			name = JMDownloader;
+			productName = JMDownloader;
+			productType = "com.apple.product-type.application";
+			productReference = C21BF66B482AA5BD4BA2B553;
+			buildConfigurationList = 5D6966DA49C6E6FF6468B58B;
+			buildPhases = (CE8A5C22FFF44D7AFBF62D29, 7D94B802A24925F00F4B7AD8, EE916712BC9CF6E550361C6E,);
+			buildRules = ();
+			dependencies = ();
+		};
+		CEE14E71159D1033EFD7441F = {
+			isa = PBXGroup;
+			name = JMDownloader;
+			children = (110158753DEE68AFE509DBFD, 55F99B8953F56495F87C6869, DA4F94D9A76A5F043FD1BBF9, 7ACA46F17D99F3F15039315A, FD514F54DA5BC5136EA645FE, F7499FB7CA80951141CADF12, 3DFD120113DB97D88FEF8C0E, DD60D823C0D9ED7DBA98A51E, 808AABB4F12BB6728AEC7CA2, DBEAF30AA06445A447920E66, 7B9FFAFBE0975BA4F7F69154, AEDB0E5AA26C36F06608F3E9, C937ACBC751EF7DC708E794A, 00F19FBB4AE920D7041D668C, B2B37580DAF83770189FC1D6, EF8B1193C4FF37254AFF6417, 144A73020966083443F8DB77, 8FDE14F8C2A486D551410EB0, C5BBDA64B6A7CE7730333AA0, 4F209D1498E716D5142100C3, 6E16014056E234694026D02F, 08F0036AB5B66B3CD4692451, 3B61EC68470839F3C64219C1, ADF949128FE68E3038D2AC93, 332BB308451D781EC6FBD752, C7BA53C5B128623E9214B741, E37AF3F08F7393A6B90D962E, 5814C0FF0DDB34B58CB1375B, 3494FADA2E0FCBB88C823CDB, 8D52CB676D5A996AE1197F0D,);
+			sourceTree = "<group>";
+		};
+		FA8FD8BBB1CFC8F5C306A51B = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Tests/CompatibilityTests.swift;
+			sourceTree = "<group>";
+		};
+		31ABFBD9E49074E8AE7F630A = {
+			isa = PBXBuildFile;
+			fileRef = FA8FD8BBB1CFC8F5C306A51B;
+		};
+		4FDBBEDBD34BC0F35B2A00CE = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Tests/DirectoryRegressionTests.swift;
+			sourceTree = "<group>";
+		};
+		D46E32D323E8A478494C97F0 = {
+			isa = PBXBuildFile;
+			fileRef = 4FDBBEDBD34BC0F35B2A00CE;
+		};
+		FA71F23A0EE63F8AF07481F2 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Tests/DownloadStorageTests.swift;
+			sourceTree = "<group>";
+		};
+		EA34A373248DD6FFCD89759D = {
+			isa = PBXBuildFile;
+			fileRef = FA71F23A0EE63F8AF07481F2;
+		};
+		D83BFC1CEECD04AA2760FE43 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Tests/JMDownloaderTests.swift;
+			sourceTree = "<group>";
+		};
+		DA0EA5609D4545D199A99C4A = {
+			isa = PBXBuildFile;
+			fileRef = D83BFC1CEECD04AA2760FE43;
+		};
+		CB934274297F8BC0E5BC766F = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Tests/LibraryLoadingTests.swift;
+			sourceTree = "<group>";
+		};
+		8F555CC9D15A22DF6542ACBE = {
+			isa = PBXBuildFile;
+			fileRef = CB934274297F8BC0E5BC766F;
+		};
+		B32CC4D115B25922F620098B = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Tests/LibraryProgressTests.swift;
+			sourceTree = "<group>";
+		};
+		AEC69028B0B1D3FF09390E80 = {
+			isa = PBXBuildFile;
+			fileRef = B32CC4D115B25922F620098B;
+		};
+		868DF3DE5E42BF91BDAF041B = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Tests/NetworkRoutingTests.swift;
+			sourceTree = "<group>";
+		};
+		AFAA2E275A808EC8B8281CF0 = {
+			isa = PBXBuildFile;
+			fileRef = 868DF3DE5E42BF91BDAF041B;
+		};
+		CC9B0DA49444410FC3A24A1F = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Tests/RecommendationRefreshTests.swift;
+			sourceTree = "<group>";
+		};
+		0A768BDDDBA1D84565EC5FBD = {
+			isa = PBXBuildFile;
+			fileRef = CC9B0DA49444410FC3A24A1F;
+		};
+		09ADE6A53BCFE92B906E7E9C = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Tests/RecommendationTests.swift;
+			sourceTree = "<group>";
+		};
+		674FF27036AD5521E252654D = {
+			isa = PBXBuildFile;
+			fileRef = 09ADE6A53BCFE92B906E7E9C;
+		};
+		9FE1E583B76E1914E6B6770A = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Tests/ResponsivenessTests.swift;
+			sourceTree = "<group>";
+		};
+		318AAAD628AA857BC16F4771 = {
+			isa = PBXBuildFile;
+			fileRef = 9FE1E583B76E1914E6B6770A;
+		};
+		E3B30EB201513498E38627D3 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Tests/StorageAndLoadingTests.swift;
+			sourceTree = "<group>";
+		};
+		1A44E50ABEC7979817701778 = {
+			isa = PBXBuildFile;
+			fileRef = E3B30EB201513498E38627D3;
+		};
+		C8BED1CC1C182F0B4D493FDE = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = Tests/WorkflowTests.swift;
+			sourceTree = "<group>";
+		};
+		49044EFDBC214D7CE206E693 = {
+			isa = PBXBuildFile;
+			fileRef = C8BED1CC1C182F0B4D493FDE;
+		};
+		7693326FECCFEB9A1A5DB304 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (31ABFBD9E49074E8AE7F630A, D46E32D323E8A478494C97F0, EA34A373248DD6FFCD89759D, DA0EA5609D4545D199A99C4A, 8F555CC9D15A22DF6542ACBE, AEC69028B0B1D3FF09390E80, AFAA2E275A808EC8B8281CF0, 0A768BDDDBA1D84565EC5FBD, 674FF27036AD5521E252654D, 318AAAD628AA857BC16F4771, 1A44E50ABEC7979817701778, 49044EFDBC214D7CE206E693,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F9ECF6195DD1959493079DF6 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		24C0B1BF2A525676610896A8 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		54C1B201B14C348EA242F489 = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.cfbundle;
+			path = JMDownloaderTests.xctest;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		12D635613BD2E8B3BD2412A8 = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 98F54143AB4E86B28C3AFEE0;
+			proxyType = 1;
+			remoteGlobalIDString = 45BAEADA330D65E259746E8A;
+			remoteInfo = JMDownloader;
+		};
+		47586BF661D51E1E66EB3CB3 = {
+			isa = PBXTargetDependency;
+			target = 45BAEADA330D65E259746E8A;
+			targetProxy = 12D635613BD2E8B3BD2412A8;
+		};
+		1961F5AA201EA94E1BB916C0 = {
+			isa = XCBuildConfiguration;
+			name = Debug;
+			buildSettings = {
+				SWIFT_VERSION = 5.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.6.6;
+				CURRENT_PROJECT_VERSION = 21;
+				SWIFT_STRICT_CONCURRENCY = targeted;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = app.jmdownloader.jmdownloadertests;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JMDownloader.app/JMDownloader";
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				ENABLE_TESTABILITY = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+			};
+		};
+		E6664A65D77F0790D31E6104 = {
+			isa = XCBuildConfiguration;
+			name = Release;
+			buildSettings = {
+				SWIFT_VERSION = 5.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.6.6;
+				CURRENT_PROJECT_VERSION = 21;
+				SWIFT_STRICT_CONCURRENCY = targeted;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = app.jmdownloader.jmdownloadertests;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/JMDownloader.app/JMDownloader";
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+		};
+		786AB7C9A1EFE5F6D902B287 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (1961F5AA201EA94E1BB916C0, E6664A65D77F0790D31E6104,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F0C8F7750F1FD000774ABA8A = {
+			isa = PBXNativeTarget;
+			name = JMDownloaderTests;
+			productName = JMDownloaderTests;
+			productType = "com.apple.product-type.bundle.unit-test";
+			productReference = 54C1B201B14C348EA242F489;
+			buildConfigurationList = 786AB7C9A1EFE5F6D902B287;
+			buildPhases = (7693326FECCFEB9A1A5DB304, F9ECF6195DD1959493079DF6, 24C0B1BF2A525676610896A8,);
+			buildRules = ();
+			dependencies = (47586BF661D51E1E66EB3CB3,);
+		};
+		D3BE92388CBFABCA09EF8146 = {
+			isa = PBXGroup;
+			name = JMDownloaderTests;
+			children = (FA8FD8BBB1CFC8F5C306A51B, 4FDBBEDBD34BC0F35B2A00CE, FA71F23A0EE63F8AF07481F2, D83BFC1CEECD04AA2760FE43, CB934274297F8BC0E5BC766F, B32CC4D115B25922F620098B, 868DF3DE5E42BF91BDAF041B, CC9B0DA49444410FC3A24A1F, 09ADE6A53BCFE92B906E7E9C, 9FE1E583B76E1914E6B6770A, E3B30EB201513498E38627D3, C8BED1CC1C182F0B4D493FDE,);
+			sourceTree = "<group>";
+		};
+		4A87B4B3E8C9874A0AB80581 = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = UITests/CompatibilityUITests.swift;
+			sourceTree = "<group>";
+		};
+		DDB1FF73993010130EC89079 = {
+			isa = PBXBuildFile;
+			fileRef = 4A87B4B3E8C9874A0AB80581;
+		};
+		B42825FED290982136767DDC = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = UITests/JMDownloaderUITests.swift;
+			sourceTree = "<group>";
+		};
+		19816E8CF2A4C367CBD47D64 = {
+			isa = PBXBuildFile;
+			fileRef = B42825FED290982136767DDC;
+		};
+		D8A32A9DB9C2B308D8CF1062 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (DDB1FF73993010130EC89079, 19816E8CF2A4C367CBD47D64,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4733CE366E0C47E7BB7D3291 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		631D3E1CDAB3751179B92C41 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BAB331BEC1F318338A7DBF9C = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.cfbundle;
+			path = JMDownloaderUITests.xctest;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		3E0E4D6F2A79542A4E28007A = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 98F54143AB4E86B28C3AFEE0;
+			proxyType = 1;
+			remoteGlobalIDString = 45BAEADA330D65E259746E8A;
+			remoteInfo = JMDownloader;
+		};
+		C621AD47ADE2B08B4CF4EAF4 = {
+			isa = PBXTargetDependency;
+			target = 45BAEADA330D65E259746E8A;
+			targetProxy = 3E0E4D6F2A79542A4E28007A;
+		};
+		D6C72FA0CC082FBC01647CB4 = {
+			isa = XCBuildConfiguration;
+			name = Debug;
+			buildSettings = {
+				SWIFT_VERSION = 5.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.6.6;
+				CURRENT_PROJECT_VERSION = 21;
+				SWIFT_STRICT_CONCURRENCY = targeted;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = app.jmdownloader.jmdownloaderuitests;
+				TEST_TARGET_NAME = JMDownloader;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				ENABLE_TESTABILITY = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+			};
+		};
+		39F343963A1A5A03560B44AE = {
+			isa = XCBuildConfiguration;
+			name = Release;
+			buildSettings = {
+				SWIFT_VERSION = 5.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.6.6;
+				CURRENT_PROJECT_VERSION = 21;
+				SWIFT_STRICT_CONCURRENCY = targeted;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = app.jmdownloader.jmdownloaderuitests;
+				TEST_TARGET_NAME = JMDownloader;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+		};
+		6CF35C17F43AD531BF6DC960 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (D6C72FA0CC082FBC01647CB4, 39F343963A1A5A03560B44AE,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9C5AD10CC839937473251E1C = {
+			isa = PBXNativeTarget;
+			name = JMDownloaderUITests;
+			productName = JMDownloaderUITests;
+			productType = "com.apple.product-type.bundle.ui-testing";
+			productReference = BAB331BEC1F318338A7DBF9C;
+			buildConfigurationList = 6CF35C17F43AD531BF6DC960;
+			buildPhases = (D8A32A9DB9C2B308D8CF1062, 4733CE366E0C47E7BB7D3291, 631D3E1CDAB3751179B92C41,);
+			buildRules = ();
+			dependencies = (C621AD47ADE2B08B4CF4EAF4,);
+		};
+		ACA90F8FA805C352A2A8110A = {
+			isa = PBXGroup;
+			name = JMDownloaderUITests;
+			children = (4A87B4B3E8C9874A0AB80581, B42825FED290982136767DDC,);
+			sourceTree = "<group>";
+		};
+		FBDC4F23F93125BBEEAE800C = {
+			isa = PBXGroup;
+			name = Products;
+			children = (C21BF66B482AA5BD4BA2B553, 54C1B201B14C348EA242F489, BAB331BEC1F318338A7DBF9C,);
+			sourceTree = "<group>";
+		};
+		B28B7AF69320201D1CF206EB = {
+			isa = PBXGroup;
+			children = (CEE14E71159D1033EFD7441F, D3BE92388CBFABCA09EF8146, ACA90F8FA805C352A2A8110A, FBDC4F23F93125BBEEAE800C,);
+			sourceTree = "<group>";
+		};
+		89E1FD6268CC0F221A2BE178 = {
+			isa = XCBuildConfiguration;
+			name = Debug;
+			buildSettings = {
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				ENABLE_TESTABILITY = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+			};
+		};
+		E6DE6C99132752C914FEF632 = {
+			isa = XCBuildConfiguration;
+			name = Release;
+			buildSettings = {
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+		};
+		862894B703A6DEDF96A9DD6C = {
+			isa = XCConfigurationList;
+			buildConfigurations = (89E1FD6268CC0F221A2BE178, E6DE6C99132752C914FEF632,);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		98F54143AB4E86B28C3AFEE0 = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 2600;
+				BuildIndependentTargetsInParallel = YES;
+			};
+			buildConfigurationList = 862894B703A6DEDF96A9DD6C;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			knownRegions = (en, "zh-Hans", Base,);
+			mainGroup = B28B7AF69320201D1CF206EB;
+			productRefGroup = FBDC4F23F93125BBEEAE800C;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (45BAEADA330D65E259746E8A, F0C8F7750F1FD000774ABA8A, 9C5AD10CC839937473251E1C,);
+		};
+	};
+	rootObject = 98F54143AB4E86B28C3AFEE0;
+}

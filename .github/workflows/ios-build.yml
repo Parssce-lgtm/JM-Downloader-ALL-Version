@@ -8,21 +8,20 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
+    name: iOS 26 full tests and unified IPA
     runs-on: macos-26
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - name: Unpack source
-        run: unzip -oq JM-downloader-source.zip
       - name: Select Xcode 26
         run: |
           XCODE=$(find /Applications -maxdepth 1 -name 'Xcode_26*.app' | sort -V | tail -1)
-          if [ -n "$XCODE" ]; then sudo xcode-select -s "$XCODE/Contents/Developer"; fi
+          sudo xcode-select -s "$XCODE/Contents/Developer"
           xcodebuild -version
           xcrun simctl list devices available
-      - name: Unit and UI tests on iPhone 17 Pro Max
+      - name: Full unit and UI tests
         run: bash scripts/test-ios.sh
-      - name: Build unsigned device IPA
+      - name: Build single unsigned device IPA
         run: bash scripts/build-unsigned-ipa.sh
       - uses: actions/upload-artifact@v4
         if: always()
@@ -33,4 +32,54 @@ jobs:
             build/Tests.xcresult
             build/screenshots
           if-no-files-found: warn
+          retention-days: 14
+  legacy:
+    name: iOS ${{ matrix.os }} traditional interface
+    runs-on: macos-14
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: '17'
+            xcode: '15.4'
+            device: com.apple.CoreSimulator.SimDeviceType.iPhone-XS
+          - os: '18'
+            xcode: '16.2'
+            device: com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select older Xcode and runtime
+        run: sudo xcode-select -s /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
+      - name: Unit and interface compatibility tests
+        env:
+          JM_TEST_OS: ${{ matrix.os }}
+          JM_DEVICE_TYPE: ${{ matrix.device }}
+        run: bash scripts/test-compatibility.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compatibility-ios-${{ matrix.os }}
+          path: |
+            build/Compatibility.xcresult
+            build/screenshots
+          retention-days: 14
+  ios27:
+    name: iOS 27 compatibility
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit and interface compatibility tests
+        env:
+          JM_TEST_OS: '27'
+          JM_DEVICE_TYPE: com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max
+        run: bash scripts/test-compatibility.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compatibility-ios-27
+          path: |
+            build/Compatibility.xcresult
+            build/screenshots
           retention-days: 14
