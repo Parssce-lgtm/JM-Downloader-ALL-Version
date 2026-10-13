@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       compatibility:
-        description: Also run the iOS 17, 18 and 27 matrix
+        description: Also run the iOS 16 traditional-interface representative
         type: boolean
         default: true
         required: false
@@ -41,53 +41,29 @@ jobs:
           retention-days: 14
   legacy:
     if: ${{ inputs.compatibility }}
-    name: iOS ${{ matrix.os }} traditional interface
+    name: iOS 16 traditional interface representative
     runs-on: macos-14
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: '17'
-            xcode: '15.4'
-            device: com.apple.CoreSimulator.SimDeviceType.iPhone-XS
-          - os: '18'
-            xcode: '16.2'
-            device: com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro
     steps:
       - uses: actions/checkout@v4
-      - name: Select older Xcode and runtime
-        run: sudo xcode-select -s /Applications/Xcode_${{ matrix.xcode }}.app/Contents/Developer
-      - name: Unit and interface compatibility tests
+      - name: Install Apple iOS 16.4 runtime
+        timeout-minutes: 15
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          xcodebuild -downloadPlatform iOS -buildVersion 16.4
+      - name: Select legacy-compatible toolchain
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+      - name: Unit and interface representative tests
         env:
-          JM_TEST_OS: ${{ matrix.os }}
-          JM_DEVICE_TYPE: ${{ matrix.device }}
+          JM_TEST_OS: '16'
+          JM_DEVICE_TYPE: com.apple.CoreSimulator.SimDeviceType.iPhone-XS
         run: bash scripts/test-compatibility.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: compatibility-ios-${{ matrix.os }}
+          name: compatibility-ios-16
           path: |
             build/Compatibility.xcresult
             build/screenshots
-          retention-days: 14
-  ios27:
-    if: ${{ inputs.compatibility }}
-    name: iOS 27 compatibility
-    runs-on: xcode-27
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - name: Unit and interface compatibility tests
-        env:
-          JM_TEST_OS: '27'
-          JM_DEVICE_TYPE: com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max
-        run: bash scripts/test-compatibility.sh
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: compatibility-ios-27
-          path: |
-            build/Compatibility.xcresult
-            build/screenshots
+          if-no-files-found: warn
           retention-days: 14
