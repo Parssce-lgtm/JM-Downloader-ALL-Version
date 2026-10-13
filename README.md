@@ -1,4 +1,4 @@
-# JM downloader 1.6.6 / Build 19
+# JM downloader 1.6.6 / Build 20
 
 原生 SwiftUI / UIKit 漫画下载应用，支持 JMComic 与 PicACG，最低系统版本为 iOS 26.0。针对 iPhone 17 Pro Max 适配安全区域、自适应布局与动态字体。
 
@@ -18,8 +18,6 @@ bash scripts/build-unsigned-ipa.sh
 ```
 
 GitHub Actions 手动执行 Build iOS，先测试再生成 `JM-downloader-unsigned.ipa`。未签名 IPA 需要自行签名后安装。默认不包含开发者证书、个人账号或个人漫画文件。
-
-最近验证：[1.6.6 / Build 19 成功构建](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38323533235)，82 项单元测试、15 项界面测试通过。在该构建的 Artifacts 下载 `JM-downloader-build` 获取 IPA。
 
 
 ## 使用
@@ -125,6 +123,8 @@ GitHub Actions 手动执行 Build iOS，先测试再生成 `JM-downloader-unsign
 API 资源超时为 30 秒，收藏和推荐单轮加载上限为 180 秒，主动搜索为 60 秒；会话续登后可再请求一轮。故障线路会短暂降低优先级，失败信息显示在对应页面的提示记录中。已有漫画保留，重新加载可使用下拉刷新或更多菜单。
 
 ### 1.6.6
+
+- **Build 20：确认菜单与下载顺序**：排除漫画的下载确认及删除任务确认使用左对齐文案、半透明灰底宽胶囊按钮；仅保留“确认”，下载按钮文字使用主题色，删除按钮文字使用红色。正在下载的漫画排在最顶部，正在生成 PDF 的漫画紧随其后，再显示读取章节与等待下载；同状态维持新任务在前，状态变化立即重新排序。
 
 - **Build 19：收藏查看**：查看已下载和已隐藏使用互斥状态，只展示对应状态的漫画；隐藏选择开启后提供“关闭隐藏漫画”，可随时退出。
 - **不喜欢反馈**：推荐选择“不喜欢该漫画”后卡片立即变淡，排除立即生效，刷新推荐后卡片消失。
