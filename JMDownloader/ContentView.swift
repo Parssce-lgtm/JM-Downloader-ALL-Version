@@ -23,7 +23,7 @@ struct ContentView: View {
             VStack(spacing: 10) {
                 header.padding(.horizontal, layout.sideInset)
                 NativeLibraryTabs(selection: $tab, paging: paging)
-                    .frame(height: tabsHeight).padding(.horizontal, layout.sideInset)
+                    .frame(maxWidth: .infinity).frame(height: tabsHeight).padding(.horizontal, layout.sideInset)
                 NativeLibraryPager(selection: $tab, paging: paging, animated: !reduceMotion, pages: LibraryTab.allCases.map { item in
                     AnyView(LibraryModuleView(store: store, pageState: pageStates[item]!, tab: item, isActive: item == tab, bottomInset: bottomInset, onSettings: { settings = true }, onLogs: { logHistory = true })
                         .id(item).tint(store.preferences.accent).environment(\.appLayout, layout))
@@ -724,6 +724,7 @@ private struct NoticeCapsuleStyle: ViewModifier {
         if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
             content.glassEffect(transparent ? .clear : .regular.interactive(interactive),
                 in: ConcentricRectangle(uniformTopCorners: .fixed(33), uniformBottomCorners: .concentric(minimum: 16)))
+                .contentShape(.accessibility, Rectangle())
         } else {
             traditional(content)
         }

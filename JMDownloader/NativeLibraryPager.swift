@@ -25,6 +25,10 @@ struct NativeLibraryTabs: UIViewRepresentable {
         context.coordinator.parent = self
         control.selectedSegmentIndex = LibraryTab.allCases.firstIndex(of: selection)!
     }
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: TrackingLibraryTabs, context: Context) -> CGSize? {
+        CGSize(width: proposal.width ?? uiView.intrinsicContentSize.width,
+               height: proposal.height ?? uiView.intrinsicContentSize.height)
+    }
     final class Coordinator: NSObject {
         var parent: NativeLibraryTabs
         init(_ parent: NativeLibraryTabs) { self.parent = parent }
@@ -67,6 +71,10 @@ final class TrackingLibraryTabs: UISegmentedControl {
         updateAppearance()
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+    override var intrinsicContentSize: CGSize {
+        CGSize(width: super.intrinsicContentSize.width,
+               height: max(34, UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 12))
+    }
     override func layoutSubviews() { super.layoutSubviews(); drawIndicator() }
     override func traitCollectionDidChange(_ previous: UITraitCollection?) {
         super.traitCollectionDidChange(previous); updateAppearance()

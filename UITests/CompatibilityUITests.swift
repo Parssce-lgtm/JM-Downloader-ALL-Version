@@ -7,6 +7,8 @@ final class CompatibilityUITests: XCTestCase {
         app.launch()
         let tabs = app.segmentedControls["libraryTabs"]
         XCTAssertTrue(tabs.waitForExistence(timeout: 15))
+        XCTAssertGreaterThanOrEqual(tabs.frame.height, 32)
+        XCTAssertLessThanOrEqual(tabs.frame.height, 60)
         let window = app.windows.firstMatch.frame
         for title in ["漫画收藏", "漫画推荐", "下载任务"] {
             tabs.buttons[title].tap()
