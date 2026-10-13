@@ -19,11 +19,9 @@ bash scripts/build-unsigned-ipa.sh
 
 GitHub Actions 手动执行 Build iOS，默认仅测试 iOS 16.4（代表 16–18 传统界面）和 iOS 26（代表 26–27 液态玻璃），先测试再生成 `JM-downloader-unsigned.ipa`。未签名 IPA 需要自行签名后安装。默认不包含开发者证书、个人账号或个人漫画文件。
 
-最新发布：[1.6.6 / Build 21 统一版](https://github.com/Parssce-lgtm/JM-downloader-iOS/releases/tag/v1.6.6)，只提供一个适用于所有支持系统的未签名 IPA。
+最新发布：[1.7.0 / Build 22 统一版](https://github.com/Parssce-lgtm/JM-downloader-iOS/releases/tag/v1.7.0)，只提供一个适用于所有支持系统的未签名 IPA。
 
-上一版兼容性基线：[iOS 17、18、26、27 成功构建](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38345275812)，iOS 26 完整通过 88 项单元测试和 18 项界面测试；[iOS 16.4 补充验证](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38346114935)通过。其余系统各通过 88 项单元测试及 2 项界面检查。
-
-
+本次代表系统验证：[iOS 26 完整测试和 IPA 构建](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38476769646)通过 95 项单元测试和 19 项界面测试；[iOS 16.4 检查](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38472664900)通过 95 项单元测试和 3 项界面测试。16.4 代表 16–18，26 代表 26–27；常规 CI 不重复测试其他系统。真机及真实账号搜索未单独实测。
 
 ## 使用
 
@@ -56,7 +54,6 @@ GitHub Actions 手动执行 Build iOS，默认仅测试 iOS 16.4（代表 16–1
 - 收紧返回列表按钮的点击与辅助功能范围，避免在新系统中被识别为整页；横向翻页仍使用原生手指跟随滑动。
 - 校验普通搜索返回的标题、编号与标签；`#标签` 和 `标签A+标签B` 按完整标签匹配，多个标签必须同时满足。
 - 搜索刷新保留现有卡片；分页成功后才推进页码，重试不会跳页，重复漫画去重。版本统一更新为 1.7.0，同一 IPA 支持 iOS 16 及以上。
-
 
 ### 1.1.0
 
