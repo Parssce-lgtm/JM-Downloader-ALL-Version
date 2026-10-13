@@ -128,7 +128,7 @@ final class LibraryPagerController: UIViewController, UIScrollViewDelegate {
     private var selectedIndex = 0
     private var lastSize: CGSize = .zero
     var onSelection: ((Int) -> Void)?
-    var onPosition: ((CGFloat) -> Void)?
+    var onPosition: (@MainActor (CGFloat) -> Void)?
 
     override func viewDidLoad() {
         super.viewDidLoad()
