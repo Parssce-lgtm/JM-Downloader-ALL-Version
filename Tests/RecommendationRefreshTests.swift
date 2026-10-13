@@ -13,9 +13,9 @@ private final class TagCatalogProtocol: URLProtocol {
         let url = request.url!
         let query = URLComponents(url: url, resolvingAgainstBaseURL: false)!.queryItems ?? []
         let id = query.first { $0.name == "id" }?.value ?? ""
-        let tags = id == "200" ? ["别的"] : (id == "202" ? ["剧情扩展"] : ["剧情"])
+        let tags = ["200": ["别的"], "201": ["剧情", "校园"], "202": ["剧情扩展", "校园"], "203": ["无关"]][id] ?? ["剧情"]
         let data: [String: Any] = url.path == "/search"
-            ? ["content": [["id": "200", "name": "剧情标题但没有该标签"], ["id": "201", "name": "真正含标签"], ["id": "202", "name": "仅含相似标签"]]]
+            ? ["content": [["id": "200", "name": "剧情标题但没有该标签"], ["id": "201", "name": "真正含标签"], ["id": "202", "name": "仅含相似标签"], ["id": "203", "name": "服务器混入的无关漫画"]]]
             : ["id": id, "name": "fixture", "tags": tags]
         let payload = try! JSONSerialization.data(withJSONObject: ["code": 200, "data": data])
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
@@ -109,6 +109,13 @@ final class RecommendationRefreshTests: XCTestCase {
         XCTAssertTrue(ComicSearchQuery.hasTag(comic, "ai绘图"))
         XCTAssertFalse(ComicSearchQuery.hasTag(comic, "剧情"))
         XCTAssertFalse(ComicSearchQuery.hasTag(comic, "AI"))
+    }
+    func testJMMultipleTagsVerifyCompleteMetadataAndExcludePartialMatches() async throws {
+        var preferences = Preferences(); preferences.domains = "tags.invalid"
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [TagCatalogProtocol.self]
+        let api = try JMAPI(preferences: preferences, configuration: config)
+        let result = try await ComicSearchQuery("剧情+校园").results(using: api, page: 1)
+        XCTAssertEqual(result.map(\.id), ["201"])
     }
     func testLargeRecommendationFeedIsCompleteButPublishedInBatches() async throws {
         let probe = RankingBatchProbe()

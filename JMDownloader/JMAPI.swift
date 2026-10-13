@@ -192,7 +192,15 @@ actor JMAPI: ComicAPI {
             guard page == 1 else { return [] }
             return try comics([try await request("/album", query: ["id": id])])
         }
-        return try await sortedSearch(value, page: page, sort: .latest)
+        let rows = try await sortedSearch(value, page: page, sort: .latest)
+        let verified = try await ConcurrentLoad.map(rows, limit: 6) { comic -> Comic? in
+            if ComicSearchQuery.matchesText(comic, value) { return comic }
+            do {
+                let full = try await self.recommendationDetail(comic)
+                return ComicSearchQuery.matchesText(full, value) ? full : nil
+            } catch is RecommendationDetailUnavailable { return nil }
+        }
+        return verified.compactMap { $0 }
     }
     func searchTag(_ tag: String, page: Int = 1) async throws -> [Comic] {
         guard !tag.isEmpty else { throw JMError.message("请输入 # 后面的标签。") }

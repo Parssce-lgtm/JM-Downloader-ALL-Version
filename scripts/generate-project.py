@@ -25,7 +25,7 @@ def configs(name, settings):
 
 common = dict(SWIFT_VERSION='5.0', IPHONEOS_DEPLOYMENT_TARGET='16.0', SDKROOT='iphoneos',
               TARGETED_DEVICE_FAMILY='1', CLANG_ENABLE_MODULES='YES', CODE_SIGN_STYLE='Automatic',
-              GENERATE_INFOPLIST_FILE='YES', MARKETING_VERSION='1.6.6', CURRENT_PROJECT_VERSION='21',
+              GENERATE_INFOPLIST_FILE='YES', MARKETING_VERSION='1.7.0', CURRENT_PROJECT_VERSION='22',
               SWIFT_STRICT_CONCURRENCY='targeted', SUPPORTED_PLATFORMS='iphoneos iphonesimulator')
 targets, groups, products = [], [], []
 for name, folder, product_type in [

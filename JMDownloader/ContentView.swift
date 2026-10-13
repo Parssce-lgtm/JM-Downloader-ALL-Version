@@ -97,7 +97,6 @@ private final class LibraryPageState: ObservableObject {
     @Published var globalSearch: Bool = false
     @Published var favoriteVisibility: FavoriteVisibility = .regular
     @Published var showDownloadedRecommendations: Bool = false
-    @Published var searchPage: Int = 1
     @Published var mode: SelectionMode = .none
     @Published var selected: Set<String> = []
     @Published var deleteAnchor: String? = nil
@@ -145,10 +144,6 @@ private struct LibraryModuleView: View {
         get { pageState.showDownloadedRecommendations }
         nonmutating set { pageState.showDownloadedRecommendations = newValue }
     }
-    private var searchPage: Int {
-        get { pageState.searchPage }
-        nonmutating set { pageState.searchPage = newValue }
-    }
     private var mode: SelectionMode {
         get { pageState.mode }
         nonmutating set { pageState.mode = newValue }
@@ -172,7 +167,9 @@ private struct LibraryModuleView: View {
     @Environment(\.appLayout) private var layout
     @FocusState private var searchFocused: Bool
 
-    private var source: [Comic] { globalSearch ? store.searchResults : (tab == .favorites ? store.favorites : store.recommendations) }
+    private var searchScope: ComicSearchScope { tab == .favorites ? .favorites : .recommendations }
+    private var searchState: ComicSearchState { store.searchState(searchScope) }
+    private var source: [Comic] { globalSearch ? searchState.results : (tab == .favorites ? store.favorites : store.recommendations) }
     private var comics: [Comic] {
         let downloaded = store.downloadedComicKeys
         let excluded = Set(store.excluded.map(DownloadCatalog.key))
@@ -192,13 +189,13 @@ private struct LibraryModuleView: View {
     private var tasks: [DownloadJob] {
         store.visibleJobs.filter { query.isEmpty || globalSearch || $0.comic.title.localizedCaseInsensitiveContains(query) || $0.comic.id.contains(query) }
     }
-    private var busy: Bool { store.signingIn || (globalSearch ? store.searching : (tab == .favorites ? store.refreshing : (store.recommending || store.refreshing))) }
+    private var busy: Bool { store.signingIn || (globalSearch ? searchState.searching : (tab == .favorites ? store.refreshing : (store.recommending || store.refreshing))) }
     private var failed: Bool {
-        !store.connected || (globalSearch ? store.searchFailure != nil : (tab == .favorites ? store.favoriteFailure != nil : (store.recommendationFailure != nil || store.favoriteFailure != nil)))
+        !store.connected || (globalSearch ? searchState.failure != nil : (tab == .favorites ? store.favoriteFailure != nil : (store.recommendationFailure != nil || store.favoriteFailure != nil)))
     }
     private var failureKind: LibraryFailureKind {
         if !store.connected { return .load }
-        return (globalSearch ? store.searchFailureKind : (tab == .favorites ? store.favoriteFailureKind : (store.recommendationFailureKind ?? store.favoriteFailureKind))) ?? .load
+        return (globalSearch ? searchState.failureKind : (tab == .favorites ? store.favoriteFailureKind : (store.recommendationFailureKind ?? store.favoriteFailureKind))) ?? .load
     }
 
     var body: some View {
@@ -212,8 +209,8 @@ private struct LibraryModuleView: View {
             .contentShape(Rectangle())
             .accessibilityHidden(!isActive)
             .sheet(item: $previewComic) { CoverPreview(comic: $0, preferences: store.preferences) }
-            .onDisappear { exitSearch(); endSelection() }
-            .onChangeCompat(of: isActive) { _, active in if !active { exitSearch(); endSelection() } }
+            .onDisappear { dismissTransientControls() }
+            .onChangeCompat(of: isActive) { _, active in if !active { dismissTransientControls() } }
             // Keep the submit button until keyboard dismissal completes. The
             // window's non-canceling tap gesture can remove focus before the
             // button receives its action; hiding on focus loss drops that tap.
@@ -224,8 +221,14 @@ private struct LibraryModuleView: View {
             .onChangeCompat(of: store.account) { _, _ in resetPage() }
     }
     private func resetPage() { showDownloadedFavorites = false; showDownloadedRecommendations = false; showHiddenFavorites = false; endSelection(); folder = "全部收藏夹"; exitSearch() }
+    private func dismissTransientControls() { showSearch = false; searchFocused = false; endSelection() }
+    private func refreshCurrentList() {
+        if globalSearch { store.search(submittedQuery, scope: searchScope) }
+        else if tab == .favorites { store.refreshFavorites() }
+        else { store.loadRecommendations() }
+    }
     private func exitSearch() {
-        if globalSearch { store.cancelSearch() }
+        if globalSearch { store.cancelSearch(scope: searchScope) }
         globalSearch = false; showSearch = false; searchFocused = false; query = ""; submittedQuery = ""
     }
     private var toolsPane: some View {
@@ -234,7 +237,7 @@ private struct LibraryModuleView: View {
             if showSearch {
                 HStack {
                     Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                    TextField("漫画名、编号或标签，#标签精确搜索", text: $pageState.query).submitLabel(.search)
+                    TextField("漫画名、#标签或标签A+标签B", text: $pageState.query).submitLabel(.search)
                         .focused($searchFocused).accessibilityIdentifier("comicSearchField")
                         .task { searchFocused = true }
                         .onSubmit { submitSearch() }
@@ -267,8 +270,8 @@ private struct LibraryModuleView: View {
                         emptyLibrary
                     }
                     ForEach(comics) { comic in comicRow(comic) }
-                    if globalSearch && !comics.isEmpty {
-                            Button("加载更多") { searchPage += 1; store.search(submittedQuery, page: searchPage) }.disabled(store.searching)
+                    if globalSearch && searchState.page > 0 {
+                            Button("加载更多") { store.search(submittedQuery, page: searchState.page + 1, scope: searchScope) }.disabled(searchState.searching)
                     }
                 }.padding(.bottom, 100 + bottomInset)
             }
@@ -279,7 +282,7 @@ private struct LibraryModuleView: View {
                 withAnimation(.appTransition) { reader.scrollTo("libraryTop", anchor: .top) }
             }
             .refreshable {
-                if globalSearch { searchPage = 1; store.search(submittedQuery) } else if tab == .favorites { store.refreshFavorites() } else { store.loadRecommendations() }
+                refreshCurrentList()
             }
             }
         }.padding(.horizontal, layout.sideInset).padding(.top, 8)
@@ -306,7 +309,7 @@ private struct LibraryModuleView: View {
                         if mode == .hide { endSelection() } else { beginSelection(.hide) }
                     }
                     Divider()
-                    AppButton("刷新当前列表", systemImage: "arrow.clockwise") { exitSearch(); store.refreshFavorites() }
+                    AppButton("刷新当前列表", systemImage: "arrow.clockwise") { refreshCurrentList() }
                     AppButton(showDownloadedFavorites ? "隐藏已下载" : "查看已下载", systemImage: "checkmark.circle") {
                         showDownloadedFavorites.toggle(); endSelection()
                     }
@@ -314,7 +317,7 @@ private struct LibraryModuleView: View {
                         showHiddenFavorites.toggle(); endSelection()
                     }
                 } else {
-                    AppButton("刷新列表", systemImage: "arrow.clockwise") { exitSearch(); store.loadRecommendations() }
+                    AppButton("刷新列表", systemImage: "arrow.clockwise") { refreshCurrentList() }
                     Divider()
                     AppButton(showDownloadedRecommendations ? "隐藏已下载" : "查看已下载", systemImage: "checkmark.circle") {
                         showDownloadedRecommendations.toggle(); endSelection()
@@ -356,8 +359,8 @@ private struct LibraryModuleView: View {
         }.frame(maxWidth: .infinity).padding(.vertical, 20)
     }
     private var libraryLoadCapsule: some View {
-        let progress = globalSearch ? store.searchLoad : (tab == .favorites ? store.favoriteLoad : store.recommendationLoad)
-        let failure = globalSearch ? store.searchFailure : (tab == .favorites ? store.favoriteFailure : (store.recommendationFailure ?? store.favoriteFailure))
+        let progress = globalSearch ? searchState.load : (tab == .favorites ? store.favoriteLoad : store.recommendationLoad)
+        let failure = globalSearch ? searchState.failure : (tab == .favorites ? store.favoriteFailure : (store.recommendationFailure ?? store.favoriteFailure))
         let text = failure.map { (failureKind == .network ? "网络已断开 · " : "加载失败 · ") + $0 }
             ?? (busy ? progress.text : (progress.fraction == 1 ? progress.stage : "准备就绪"))
         return ZStack {
@@ -578,8 +581,8 @@ private struct LibraryModuleView: View {
     private func submitSearch() {
         let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return }
-        query = value; submittedQuery = value; globalSearch = true; searchPage = 1; searchFocused = false; showSearch = false
-        store.search(value)
+        query = value; submittedQuery = value; globalSearch = true; searchFocused = false; showSearch = false
+        store.search(value, scope: searchScope)
     }
     private func beginSelection(_ value: SelectionMode) { withAnimation(.appTransition) { mode = value; selected = [] } }
     private func endSelection() { withAnimation(.appTransition) { mode = .none; selected = [] } }

@@ -47,9 +47,18 @@ actor ComicTagCache {
 }
 
 enum ComicSearchQuery: Equatable, Sendable {
-    case text(String), tag(String)
+    case text(String), tag(String), tags([String])
     init(_ value: String) {
         let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if value.contains("+") || value.contains("＋") {
+            let tokens = value.replacingOccurrences(of: "＋", with: "+").components(separatedBy: "+").map { token in
+                let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+                return (trimmed.hasPrefix("#") || trimmed.hasPrefix("＃"))
+                    ? String(trimmed.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines) : trimmed
+            }
+            self = .tags(tokens)
+            return
+        }
         self = value.hasPrefix("#") || value.hasPrefix("＃")
             ? .tag(String(value.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines)) : .text(value)
     }
@@ -57,4 +66,33 @@ enum ComicSearchQuery: Equatable, Sendable {
         let expected = RecommendationRanking.normalized(tag)
         return !expected.isEmpty && comic.tags.contains { RecommendationRanking.normalized($0) == expected }
     }
+    static func matchesText(_ comic: Comic, _ query: String) -> Bool {
+        let expected = RecommendationRanking.normalized(query)
+        guard !expected.isEmpty else { return false }
+        return RecommendationRanking.normalized(comic.title).contains(expected)
+            || RecommendationRanking.normalized(comic.id) == expected
+            || comic.tags.contains { RecommendationRanking.normalized($0).contains(expected) }
+    }
+    func results(using api: any ComicAPI, page: Int) async throws -> [Comic] {
+        switch self {
+        case .text(let text): return try await api.search(text, page: page)
+        case .tag(let tag):
+            guard !tag.isEmpty else { throw JMError.message("请输入 # 后面的标签。") }
+            return try await api.searchTag(tag, page: page).filter { Self.hasTag($0, tag) }
+        case .tags(let tags):
+            guard tags.count >= 2, tags.allSatisfy({ !$0.isEmpty }) else { throw JMError.message("请在 + 两侧输入完整标签。") }
+            return try await api.searchTags(tags, page: page).filter { comic in tags.allSatisfy { Self.hasTag(comic, $0) } }
+        }
+    }
+}
+
+enum ComicSearchScope: Hashable { case general, favorites, recommendations }
+struct ComicSearchState {
+    var query: ComicSearchQuery?
+    var results: [Comic] = []
+    var searching = false
+    var page = 0
+    var load = LibraryLoadProgress(stage: "准备搜索")
+    var failure: String?
+    var failureKind: LibraryFailureKind?
 }

@@ -134,7 +134,15 @@ actor PicaAPI: ComicAPI {
         return [first.comics] .flatMap { $0 } + rest.flatMap { $0 }
     }
     func search(_ query: String, page: Int = 1) async throws -> [Comic] {
-        try await sortedSearch(query, page: page, sort: .latest)
+        let rows = try await sortedSearch(query, page: page, sort: .latest)
+        let verified = try await ConcurrentLoad.map(rows, limit: 3) { comic -> Comic? in
+            if ComicSearchQuery.matchesText(comic, query) { return comic }
+            do {
+                let full = try await self.recommendationDetail(comic)
+                return ComicSearchQuery.matchesText(full, query) ? full : nil
+            } catch is RecommendationDetailUnavailable { return nil }
+        }
+        return verified.compactMap { $0 }
     }
     func searchTag(_ tag: String, page: Int = 1) async throws -> [Comic] {
         guard !tag.isEmpty else { throw JMError.message("请输入 # 后面的标签。") }

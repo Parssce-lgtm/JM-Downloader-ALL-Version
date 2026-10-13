@@ -31,21 +31,36 @@ final class AppStore: ObservableObject {
         RecommendationRanking.blocked(comic, blacklist: tagBlacklist)
             || titleBlacklist.contains { RecommendationRanking.normalized(comic.title).contains($0) }
     }
-    @Published var searchResults: [Comic] = []
+    var searchResults: [Comic] {
+        get { searchState().results }
+        set { searches[.general, default: ComicSearchState()].results = newValue }
+    }
     @Published var logs: [LogEntry] = []
     @Published var signingIn = false
     @Published var refreshing = false
     @Published var recommending = false
-    @Published var searching = false
+    var searching: Bool {
+        get { searchState().searching }
+        set { searches[.general, default: ComicSearchState()].searching = newValue }
+    }
     @Published var favoriteLoad = LibraryLoadProgress(stage: "准备加载")
     @Published var recommendationLoad = LibraryLoadProgress(stage: "准备加载")
-    @Published var searchLoad = LibraryLoadProgress(stage: "准备搜索")
+    var searchLoad: LibraryLoadProgress {
+        get { searchState().load }
+        set { searches[.general, default: ComicSearchState()].load = newValue }
+    }
     @Published var favoriteFailure: String?
     @Published var recommendationFailure: String?
-    @Published var searchFailure: String?
+    var searchFailure: String? {
+        get { searchState().failure }
+        set { searches[.general, default: ComicSearchState()].failure = newValue }
+    }
     @Published var favoriteFailureKind: LibraryFailureKind?
     @Published var recommendationFailureKind: LibraryFailureKind?
-    @Published var searchFailureKind: LibraryFailureKind?
+    var searchFailureKind: LibraryFailureKind? {
+        get { searchState().failureKind }
+        set { searches[.general, default: ComicSearchState()].failureKind = newValue }
+    }
     @Published var alert: String?
     @Published var clients: [String: any ComicAPI] = [:]
     var platform: ComicPlatform { preferences.selectedPlatform ?? .jmcomic }
@@ -63,8 +78,9 @@ final class AppStore: ObservableObject {
     private var generation = UUID()
     private var activeAccounts: [ComicPlatform: String] = [:]
     private var recommendationTask: Task<Void, Never>?
-    private var searchID = UUID()
-    private var searchTask: Task<Void, Never>?
+    @Published private var searches: [ComicSearchScope: ComicSearchState] = [:]
+    private var searchIDs: [ComicSearchScope: UUID] = [:]
+    private var searchTasks: [ComicSearchScope: Task<Void, Never>] = [:]
     private var refreshTask: Task<Void, Never>?
     private var didStart = false
     private var savedAccount = ""
@@ -334,7 +350,7 @@ final class AppStore: ObservableObject {
             else { api = try PicaAPI(preferences: preferences, tagCache: tagCache(for: key)) }
             try await api.login(username: username, password: password)
             generation = UUID()
-            refreshTask?.cancel(); recommendationTask?.cancel(); searchTask?.cancel()
+            refreshTask?.cancel(); recommendationTask?.cancel(); cancelAllSearches()
             refreshing = false; recommending = false; searching = false
             favoriteFailure = nil; recommendationFailure = nil; searchFailure = nil
         favoriteFailureKind = nil; recommendationFailureKind = nil; searchFailureKind = nil
@@ -357,7 +373,7 @@ final class AppStore: ObservableObject {
     func switchPlatform(_ value: ComicPlatform) {
         guard !signingIn, value != platform else { return }
         generation = UUID()
-        refreshTask?.cancel(); recommendationTask?.cancel(); searchTask?.cancel()
+        refreshTask?.cancel(); recommendationTask?.cancel(); cancelAllSearches()
         refreshing = false; recommending = false; searching = false
         favoriteFailure = nil; recommendationFailure = nil; searchFailure = nil
         favoriteFailureKind = nil; recommendationFailureKind = nil; searchFailureKind = nil
@@ -374,7 +390,7 @@ final class AppStore: ObservableObject {
     }
     func logout() {
         generation = UUID()
-        refreshTask?.cancel(); recommendationTask?.cancel(); searchTask?.cancel()
+        refreshTask?.cancel(); recommendationTask?.cancel(); cancelAllSearches()
         for job in jobs where job.owner == account && [.queued, .preparing, .downloading, .exporting].contains(job.state) { engine.pause(job.id) }
         renewals[account]?.cancel(); renewals[account] = nil; SessionVault.remove(account)
         clients[account] = nil; activeAccounts[platform] = nil; account = ""; recommendations = []; searchResults = []
@@ -482,42 +498,55 @@ final class AppStore: ObservableObject {
             } }
         }
     }
-    func search(_ query: String, page: Int = 1) {
-        guard let api = clients[account] else { searchFailure = "请先登录。"; searchFailureKind = .load; return }
-        searchTask?.cancel(); searching = true; searchFailure = nil; searchFailureKind = nil; searchLoad = .init(stage: "正在搜索")
-        let query = ComicSearchQuery(query)
-        let requestID = UUID(); searchID = requestID
-        if page == 1 { searchResults = [] }
+    func searchState(_ scope: ComicSearchScope = .general) -> ComicSearchState { searches[scope] ?? ComicSearchState() }
+    func search(_ value: String, page: Int = 1, scope: ComicSearchScope = .general) {
+        let query = ComicSearchQuery(value)
+        let previous = searchState(scope)
+        // A failed page is retried rather than silently skipped; another query cannot append here.
+        guard page == 1 || (previous.query == query && page == previous.page + 1) else { return }
+        searchTasks[scope]?.cancel()
+        let requestID = UUID(); searchIDs[scope] = requestID
+        var state = previous.query == query ? previous : ComicSearchState()
+        state.query = query; state.searching = true; state.failure = nil; state.failureKind = nil
+        state.load = .init(stage: "正在搜索")
+        searches[scope] = state
+        guard let api = clients[account] else {
+            searches[scope]?.searching = false; searches[scope]?.failure = "请先登录。"; searches[scope]?.failureKind = .load
+            return
+        }
         let stamp = generation, owner = account
-        searchTask = Task {
-            defer { if stamp == generation && requestID == searchID { searching = false } }
+        searchTasks[scope] = Task {
+            defer { if stamp == generation && requestID == searchIDs[scope] {
+                searches[scope]?.searching = false; searchTasks[scope] = nil
+            } }
             do {
                 let comics: [Comic]
-                do { comics = try await LibraryLoadDeadline.run(seconds: 60) {
-                    switch query { case .text(let text): return try await api.search(text, page: page)
-                    case .tag(let tag): return try await api.searchTag(tag, page: page) }
-                } }
+                do { comics = try await LibraryLoadDeadline.run(seconds: 60) { try await query.results(using: api, page: page) } }
                 catch JMError.authenticationExpired {
                     let renewed = try await renewSession(owner)
-                    comics = try await LibraryLoadDeadline.run(seconds: 60) {
-                        switch query { case .text(let text): return try await renewed.search(text, page: page)
-                        case .tag(let tag): return try await renewed.searchTag(tag, page: page) }
-                    }
+                    comics = try await LibraryLoadDeadline.run(seconds: 60) { try await query.results(using: renewed, page: page) }
                 }
                 try Task.checkCancellation()
-                guard stamp == generation && requestID == searchID else { return }
-                if page == 1 { searchResults = comics }
-                else { let existing = Set(searchResults.map(\.id)); searchResults += comics.filter { !existing.contains($0.id) } }
-                searchLoad = .init(stage: "搜索完成，共 \(searchResults.count) 部", fraction: 1)
-            } catch is CancellationError { } catch { if stamp == generation && requestID == searchID {
-                searchFailure = Self.friendly(error)
-                searchFailureKind = .classify(error)
+                guard stamp == generation && requestID == searchIDs[scope] else { return }
+                var current = searchState(scope)
+                var seen = Set((page == 1 ? [] : current.results).map(DownloadCatalog.key))
+                let unique = comics.filter { seen.insert(DownloadCatalog.key($0)).inserted }
+                current.results = page == 1 ? unique : current.results + unique
+                current.page = page
+                current.load = .init(stage: "搜索完成，共 \(current.results.count) 部", fraction: 1)
+                searches[scope] = current
+            } catch is CancellationError { } catch { if stamp == generation && requestID == searchIDs[scope] {
+                searches[scope]?.failure = Self.friendly(error); searches[scope]?.failureKind = .classify(error)
             } }
         }
     }
-    func cancelSearch() {
-        searchID = UUID(); searchTask?.cancel(); searchTask = nil
-        searching = false; searchResults = []; searchFailure = nil; searchFailureKind = nil
+    func cancelSearch(scope: ComicSearchScope = .general) {
+        searchIDs[scope] = UUID(); searchTasks[scope]?.cancel(); searchTasks[scope] = nil
+        searches[scope] = nil
+    }
+    private func cancelAllSearches() {
+        for task in searchTasks.values { task.cancel() }
+        searchTasks = [:]; searchIDs = [:]; searches = [:]
     }
     private func updateFavoriteProgress(_ update: LibraryLoadProgress, stamp: UUID) {
         guard stamp == generation && refreshing else { return }

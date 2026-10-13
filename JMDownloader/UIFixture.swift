@@ -61,7 +61,11 @@ private actor FixtureAPI: ComicAPI {
         return []
     }
     func search(_ query: String, page: Int) async throws -> [Comic] {
-        page == 1 ? [Comic(id: "20001", title: "主动搜索的 AI 漫画", tags: ["AI绘图"]), Comic(id: "10001", title: "已保存的漫画")] : []
+        guard page == 1 else { return [] }
+        let rows = [Comic(id: "20001", title: "主动搜索的 AI 漫画", tags: ["AI绘图", "剧情"], tagsVerified: true),
+                    Comic(id: "20002", title: "仅含一个标签的漫画", tags: ["AI绘图扩展", "校园"], tagsVerified: true),
+                    Comic(id: "10001", title: "已保存的漫画")]
+        return rows.filter { ComicSearchQuery.matchesText($0, query) }
     }
     func recommendations(from favorites: [Comic]) async throws -> [Comic] {
         if ProcessInfo.processInfo.arguments.contains("--recommendation-loading-fixture") {

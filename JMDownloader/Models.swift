@@ -33,6 +33,7 @@ protocol ComicAPI: Sendable {
     func favorites(progress: @escaping LibraryProgressHandler) async throws -> [Comic]
     func search(_ query: String, page: Int) async throws -> [Comic]
     func searchTag(_ tag: String, page: Int) async throws -> [Comic]
+    func searchTags(_ tags: [String], page: Int) async throws -> [Comic]
     func recommendations(from favorites: [Comic]) async throws -> [Comic]
     func recommendations(from favorites: [Comic], sort: RecommendationSort) async throws -> [Comic]
     func recommendations(from favorites: [Comic], sort: RecommendationSort, preferredTags: [String], blacklist: [String]) async throws -> [Comic]
@@ -40,6 +41,11 @@ protocol ComicAPI: Sendable {
     func manifest(for comic: Comic) async throws -> [PageAsset]
 }
 extension ComicAPI {
+    func searchTags(_ tags: [String], page: Int) async throws -> [Comic] {
+        guard let first = tags.first, tags.allSatisfy({ !$0.isEmpty }) else { throw JMError.message("请输入完整标签。") }
+        // The first exact tag supplies candidates; complete metadata must contain every tag.
+        return try await searchTag(first, page: page).filter { comic in tags.allSatisfy { ComicSearchQuery.hasTag(comic, $0) } }
+    }
     func searchTag(_ tag: String, page: Int) async throws -> [Comic] {
         try await search(tag, page: page).filter { ComicSearchQuery.hasTag($0, tag) }
     }
