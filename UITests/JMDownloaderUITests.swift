@@ -13,9 +13,13 @@ final class JMDownloaderUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["jobProgressLabel-10004"].label, "25%")
         attach(app, name: "42-downloads-before-pdf-and-preparing-dark")
         let comic = app.staticTexts["正在生成 PDF 的漫画"]
+        let deletion = app.buttons["删除任务及下载缓存"]
         comic.press(forDuration: 1.5)
-        XCTAssertTrue(app.buttons["删除任务及下载缓存"].waitForExistence(timeout: 5))
-        app.buttons["删除任务及下载缓存"].tap()
+        if !deletion.waitForExistence(timeout: 3) {
+            rows[2].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4)).press(forDuration: 2)
+        }
+        XCTAssertTrue(deletion.waitForExistence(timeout: 5))
+        deletion.tap()
         let confirm = app.buttons["confirmDelete"]
         XCTAssertTrue(confirm.waitForExistence(timeout: 5))
         XCTAssertGreaterThan(confirm.frame.width, 200)
