@@ -1,0 +1,36 @@
+name: Check iOS 27 compatibility
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Source commit to validate
+        required: true
+        default: main
+permissions:
+  contents: read
+concurrency:
+  group: ios27-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  compatibility:
+    name: iOS 27 independent compatibility
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+      - name: Unit and interface checks
+        env:
+          JM_TEST_OS: '27'
+          JM_DEVICE_TYPE: com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max
+        run: bash scripts/test-compatibility.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compatibility-ios-27
+          path: |
+            build/Compatibility.xcresult
+            build/screenshots
+          if-no-files-found: warn
+          retention-days: 14

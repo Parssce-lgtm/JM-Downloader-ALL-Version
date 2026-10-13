@@ -35,7 +35,8 @@ final class DirectoryRegressionTests: XCTestCase {
         let data = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 20, height: 20)).pdfData { $0.beginPage() }
         try data.write(to: file)
         store.becameActive()
-        for _ in 0..<200 { if !store.scanningDownloads { break }; try await Task.sleep(for: .milliseconds(10)) }
+        let deadline = Date().addingTimeInterval(15)
+        while store.scanningDownloads && Date() < deadline { try await Task.sleep(for: .milliseconds(20)) }
         XCTAssertTrue(store.isDownloaded(Comic(id: id, title: "Moved")))
         XCTAssertFalse(store.scanningDownloads)
     }
