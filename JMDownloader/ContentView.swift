@@ -273,7 +273,7 @@ private struct LibraryModuleView: View {
             }
             .accessibilityIdentifier("libraryScroll-" + tab.rawValue)
             .scrollIndicators(.hidden)
-            .scrollEdgeEffectHidden(true, for: .bottom)
+            .appHideBottomEdgeEffect()
             .onChangeCompat(of: pageState.scrollToTopRequest) { _, _ in
                 withAnimation(.appTransition) { reader.scrollTo("libraryTop", anchor: .top) }
             }

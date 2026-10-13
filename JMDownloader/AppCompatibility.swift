@@ -82,6 +82,14 @@ private struct ChangeCompatibility<Value: Equatable>: ViewModifier {
 
 enum AppFeedback { case success, error }
 extension View {
+    @ViewBuilder func appHideBottomEdgeEffect() -> some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) { scrollEdgeEffectHidden(true, for: .bottom) }
+        else { self }
+        #else
+        self
+        #endif
+    }
     func onChangeCompat<Value: Equatable>(of value: Value, perform action: @escaping (Value, Value) -> Void) -> some View {
         modifier(ChangeCompatibility(value: value, action: action))
     }

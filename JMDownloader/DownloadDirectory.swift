@@ -78,7 +78,7 @@ struct FolderPicker: UIViewControllerRepresentable {
     }
 }
 
-struct DownloadDirectoryControls: View {
+@MainActor struct DownloadDirectoryControls: View {
     @Binding var bookmark: Data?
     @Binding var name: String
     @State private var picking = false

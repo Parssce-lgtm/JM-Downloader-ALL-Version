@@ -258,7 +258,7 @@ final class AppStore: ObservableObject {
         clients[owner] = api
         return api
     }
-    static func friendly(_ error: Error) -> String {
+    nonisolated static func friendly(_ error: Error) -> String {
         if let error = error as? JMTransportError { return error.localizedDescription }
         if let error = error as? LibraryLoadFailure { return error.localizedDescription }
         if let error = error as? RecommendationDetailUnavailable { return error.localizedDescription }

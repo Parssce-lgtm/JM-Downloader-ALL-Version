@@ -268,9 +268,10 @@ final class DownloadEngine: NSObject, URLSessionDownloadDelegate {
             } }
             defer { if token != .invalid { UIApplication.shared.endBackgroundTask(token) } }
             do {
-                let result = try await ImagePipeline.shared.exportResult(job, bookmark: bookmark, onProgress: { count, skipped in
-                    Task { @MainActor [weak self] in
-                        guard self?.exportIDs[job.id] == generation else { return }
+                let result = try await ImagePipeline.shared.exportResult(job, bookmark: bookmark, onProgress: { [weak engine = self] count, skipped in
+                    guard let engine else { return }
+                    Task { @MainActor in
+                        guard engine.exportIDs[job.id] == generation else { return }
                         store.change(job.id) { $0.renderedPages = count; $0.skippedPages = skipped }
                     }
                 })

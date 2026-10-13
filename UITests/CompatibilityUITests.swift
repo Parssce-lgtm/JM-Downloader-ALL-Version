@@ -44,6 +44,9 @@ final class CompatibilityUITests: XCTestCase {
     @MainActor private func capture(_ app: XCUIApplication, _ name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+        let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("compatibility-shots")
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? app.screenshot().pngRepresentation.write(to: directory.appendingPathComponent(name + ".png"))
     }
 }
 
