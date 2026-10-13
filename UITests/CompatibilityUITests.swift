@@ -55,7 +55,11 @@ final class CompatibilityUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["仅含一个标签的漫画"].exists)
         XCTAssertTrue(app.keyboards.firstMatch.waitForDisappearance(timeout: 5))
         capture(app, "multiple-tags-before-refresh")
-        app.buttons["libraryMore-漫画推荐"].tap(); app.buttons["刷新列表"].tap()
+        // Older XCTest cannot compute the AX hit point for a SwiftUI Menu in
+        // this hosting scroll view. Tap its visible frame and verify the menu opens.
+        app.buttons["libraryMore-漫画推荐"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(app.buttons["刷新列表"].waitForExistence(timeout: 5))
+        app.buttons["刷新列表"].tap()
         XCTAssertTrue(app.buttons["exitComicSearch"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["主动搜索的 AI 漫画"].waitForExistence(timeout: 10))
         app.scrollViews["libraryScroll-漫画推荐"].swipeDown()
