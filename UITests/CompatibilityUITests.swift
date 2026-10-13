@@ -3,7 +3,7 @@ import XCTest
 final class CompatibilityUITests: XCTestCase {
     @MainActor func testUnifiedNavigationCardsAndActions() {
         let app = XCUIApplication()
-        app.launchArguments = ["--ui-fixture-v120", "--traditional-ui-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launchArguments = ["--ui-fixture-v120", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
         let tabs = app.segmentedControls["libraryTabs"]
         XCTAssertTrue(tabs.waitForExistence(timeout: 15))
@@ -15,7 +15,7 @@ final class CompatibilityUITests: XCTestCase {
             XCTAssertGreaterThanOrEqual(card.frame.minX, window.minX)
             XCTAssertLessThanOrEqual(card.frame.maxX, window.maxX)
             XCTAssertGreaterThanOrEqual(card.frame.height, 92)
-            capture(app, "legacy-\(title)")
+            capture(app, "compatibility-\(title)")
         }
         app.buttons["settings"].tap()
         XCTAssertTrue(app.navigationBars["设置"].waitForExistence(timeout: 5))
@@ -27,7 +27,7 @@ final class CompatibilityUITests: XCTestCase {
     }
     @MainActor func testSmallScreenSearchAndBottomNotice() {
         let app = XCUIApplication()
-        app.launchArguments = ["--ui-fixture-v120", "--traditional-ui-fixture", "--long-library-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launchArguments = ["--ui-fixture-v120", "--long-library-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
         let tabs = app.segmentedControls["libraryTabs"]
         XCTAssertTrue(tabs.waitForExistence(timeout: 15))
@@ -36,7 +36,7 @@ final class CompatibilityUITests: XCTestCase {
         app.textFields["comicSearchField"].typeText("#AI绘图")
         app.buttons["submitComicSearch"].tap()
         XCTAssertTrue(app.staticTexts["主动搜索的 AI 漫画"].waitForExistence(timeout: 10))
-        capture(app, "legacy-search-keyboard-dismissed")
+        capture(app, "compatibility-search-keyboard-dismissed")
         app.buttons["exitComicSearch"].tap()
         app.buttons["scrollToTop"].tap()
         XCTAssertTrue(app.buttons["settings"].isHittable)
