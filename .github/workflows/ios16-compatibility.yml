@@ -1,0 +1,46 @@
+name: Check iOS 16 compatibility
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Source commit to validate
+        required: true
+        default: main
+permissions:
+  contents: read
+concurrency:
+  group: ios16-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  compatibility:
+    name: iOS 16 runtime compatibility
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+      - name: Install Apple iOS 16.4 runtime
+        timeout-minutes: 15
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          xcodebuild -version
+          df -h
+          xcodebuild -downloadPlatform iOS -buildVersion 16.4
+          xcrun simctl list runtimes
+      - name: Select deployment-compatible toolchain
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+      - name: Unit and interface checks on iOS 16
+        env:
+          JM_TEST_OS: '16'
+          JM_DEVICE_TYPE: com.apple.CoreSimulator.SimDeviceType.iPhone-XS
+        run: bash scripts/test-compatibility.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compatibility-ios-16
+          path: |
+            build/Compatibility.xcresult
+            build/screenshots
+          if-no-files-found: warn
+          retention-days: 14
