@@ -19,6 +19,8 @@ bash scripts/build-unsigned-ipa.sh
 
 GitHub Actions 手动执行 Build iOS，先测试再生成 `JM-downloader-unsigned.ipa`。未签名 IPA 需要自行签名后安装。默认不包含开发者证书、个人账号或个人漫画文件。
 
+最近验证：[1.6.6 / Build 20 成功构建](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38333476484)，83 项单元测试、16 项界面测试通过。在该构建的 Artifacts 下载 `JM-downloader-build` 获取 IPA。
+
 
 ## 使用
 
