@@ -11,6 +11,8 @@ struct ContentView: View {
     @State private var settings = false
     @State private var logHistory = false
     @State private var tab: LibraryTab = .favorites
+    @State private var paging = LibraryPagingPosition()
+    @ScaledMetric(relativeTo: .subheadline) private var tabsHeight: CGFloat = 34
     @State private var bottomInset: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pageStates = Dictionary(uniqueKeysWithValues: LibraryTab.allCases.map { ($0, LibraryPageState()) })
@@ -20,10 +22,9 @@ struct ContentView: View {
             let layout = AppLayout(width: geometry.size.width, height: geometry.size.height)
             VStack(spacing: 10) {
                 header.padding(.horizontal, layout.sideInset)
-                Picker("浏览类型", selection: $tab) {
-                    ForEach(LibraryTab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }.pickerStyle(.segmented).accessibilityIdentifier("libraryTabs").padding(.horizontal, layout.sideInset)
-                NativeLibraryPager(selection: $tab, animated: !reduceMotion, pages: LibraryTab.allCases.map { item in
+                NativeLibraryTabs(selection: $tab, paging: paging)
+                    .frame(height: tabsHeight).padding(.horizontal, layout.sideInset)
+                NativeLibraryPager(selection: $tab, paging: paging, animated: !reduceMotion, pages: LibraryTab.allCases.map { item in
                     AnyView(LibraryModuleView(store: store, pageState: pageStates[item]!, tab: item, isActive: item == tab, bottomInset: bottomInset, onSettings: { settings = true }, onLogs: { logHistory = true })
                         .id(item).tint(store.preferences.accent).environment(\.appLayout, layout))
                 })
@@ -287,7 +288,7 @@ private struct LibraryModuleView: View {
             }
             }
         }.padding(.horizontal, layout.sideInset).padding(.top, 8)
-            .overlay(alignment: .bottom) { libraryLoadCapsule.padding(.horizontal, layout.sideInset).padding(.bottom, bottomInset + 8) }
+            .overlay(alignment: .bottom) { libraryLoadCapsule.padding(.horizontal, layout.noticeInset(bottomSafeArea: bottomInset)).padding(.bottom, layout.noticeInset(bottomSafeArea: bottomInset)) }
     }
     private var controls: some View {
         HStack(spacing: 18) {
@@ -467,7 +468,7 @@ private struct LibraryModuleView: View {
                     .modifier(NoticeCapsuleStyle(interactive: true))
                     .contentShape(Capsule())
             }.buttonStyle(.plain).accessibilityIdentifier("logCapsule")
-                .padding(.horizontal, layout.sideInset).padding(.bottom, bottomInset + 8).padding(.top, 6)
+                .padding(.horizontal, layout.noticeInset(bottomSafeArea: bottomInset)).padding(.bottom, layout.noticeInset(bottomSafeArea: bottomInset)).padding(.top, 6)
         }
     }
     private func jobRow(_ job: DownloadJob) -> some View {
@@ -721,7 +722,8 @@ private struct NoticeCapsuleStyle: ViewModifier {
     func body(content: Content) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
-            content.glassEffect(transparent ? .clear : .regular.interactive(interactive), in: Capsule())
+            content.glassEffect(transparent ? .clear : .regular.interactive(interactive),
+                in: ConcentricRectangle(uniformTopCorners: .fixed(33), uniformBottomCorners: .concentric(minimum: 16)))
         } else {
             traditional(content)
         }

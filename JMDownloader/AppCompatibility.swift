@@ -42,6 +42,11 @@ struct AppLayout: Equatable {
     let height: CGFloat
     var contentWidth: CGFloat { min(max(0, width), 600) }
     var sideInset: CGFloat { contentWidth <= 375 ? 12 : 16 }
+    // Equal side and bottom insets let the floating shape resolve its bottom
+    // corners concentrically with the display. Leave room for the home gesture.
+    func noticeInset(bottomSafeArea: CGFloat) -> CGFloat {
+        max(min(24, max(16, contentWidth * 0.05)), min(24, max(0, bottomSafeArea) * 0.5 + 3))
+    }
     var cardWidth: CGFloat { max(0, contentWidth - sideInset * 2) }
     var previewHeight: CGFloat { max(140, min(420, height * 0.65)) }
 }

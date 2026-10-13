@@ -1,4 +1,4 @@
-# JM downloader 1.7.0 / Build 22
+# JM downloader 1.7.0 / Build 23
 
 原生 SwiftUI / UIKit 漫画下载应用，支持 JMComic 与 PicACG，最低系统版本为 iOS 16.0。一个 App 根据系统选择外观：iOS 16–18 使用统一传统 SwiftUI 界面，iOS 26–27 使用系统液态玻璃；按钮、卡片、导航和三页切换共用同一套结构。布局按可用宽度和安全区域自适应 5.8、6.1、6.3、6.5、6.7 英寸机型，不按机型硬编码。
 
@@ -21,7 +21,7 @@ GitHub Actions 手动执行 Build iOS，默认仅测试 iOS 16.4（代表 16–1
 
 最新发布：[1.7.0 / Build 22 统一版](https://github.com/Parssce-lgtm/JM-downloader-iOS/releases/tag/v1.7.0)，只提供一个适用于所有支持系统的未签名 IPA。
 
-本次代表系统验证：[iOS 26 完整测试和 IPA 构建](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38476769646)通过 95 项单元测试和 19 项界面测试；[iOS 16.4 检查](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38472664900)通过 95 项单元测试和 3 项界面测试。16.4 代表 16–18，26 代表 26–27；常规 CI 不重复测试其他系统。真机及真实账号搜索未单独实测。
+上一构建代表系统验证：[iOS 26 完整测试和 IPA 构建](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38476769646)通过 95 项单元测试和 19 项界面测试；[iOS 16.4 检查](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38472664900)通过 95 项单元测试和 3 项界面测试。16.4 代表 16–18，26 代表 26–27；常规 CI 不重复测试其他系统。真机及真实账号搜索未单独实测。
 
 ## 使用
 
@@ -48,7 +48,10 @@ GitHub Actions 手动执行 Build iOS，默认仅测试 iOS 16.4（代表 16–1
 
 ## 更新记录
 
-### 1.7.0 / Build 22
+### 1.7.0 / Build 23
+
+- 顶部滑块随页面拖动连续移动，松手前即可跟随当前位置；拖动取消时回到原位，点击 Tab 时跟随翻页动画。
+- 底部提示卡片像浮动 Tab 栏一样贴近屏幕底部 R 角：左右和底部使用等距留白，iOS 26 使用系统同心圆角，传统系统保留圆角卡片，留出手势条空间。
 
 - 修复搜索在刷新、左右滑动切页或查看封面后被推荐列表替换；收藏与推荐使用独立搜索状态，过期响应不会覆盖新查询。
 - 收紧返回列表按钮的点击与辅助功能范围，避免在新系统中被识别为整页；横向翻页仍使用原生手指跟随滑动。
