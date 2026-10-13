@@ -14,8 +14,12 @@ private final class TagCatalogProtocol: URLProtocol {
         let query = URLComponents(url: url, resolvingAgainstBaseURL: false)!.queryItems ?? []
         let id = query.first { $0.name == "id" }?.value ?? ""
         let tags = ["200": ["别的"], "201": ["剧情", "校园"], "202": ["剧情扩展", "校园"], "203": ["无关"]][id] ?? ["剧情"]
+        var rows = [["id": "200", "name": "剧情标题但没有该标签"], ["id": "201", "name": "真正含标签"], ["id": "202", "name": "仅含相似标签"]]
+        if query.first(where: { $0.name == "main_tag" })?.value == "0" {
+            rows.append(["id": "203", "name": "服务器混入的无关漫画"])
+        }
         let data: [String: Any] = url.path == "/search"
-            ? ["content": [["id": "200", "name": "剧情标题但没有该标签"], ["id": "201", "name": "真正含标签"], ["id": "202", "name": "仅含相似标签"], ["id": "203", "name": "服务器混入的无关漫画"]]]
+            ? ["content": rows]
             : ["id": id, "name": "fixture", "tags": tags]
         let payload = try! JSONSerialization.data(withJSONObject: ["code": 200, "data": data])
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)

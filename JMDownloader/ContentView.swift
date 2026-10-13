@@ -324,6 +324,7 @@ private struct LibraryModuleView: View {
                     }
                 }
             } label: { Label("更多", systemImage: "ellipsis.circle") }
+                .accessibilityIdentifier("libraryMore-" + tab.rawValue)
                 .popover(isPresented: deletionBinding("more"), attachmentAnchor: .rect(.bounds)) { deletionContent }
 
         }.font(.subheadline.weight(.medium)).foregroundStyle(.primary)
