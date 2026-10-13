@@ -27,7 +27,7 @@ struct SettingsView: View {
                     NavigationLink { CacheSettingsView(store: store) } label: { Label("缓存与下载目录", systemImage: "internaldrive") }.accessibilityIdentifier("cacheSettings")
                 }
                 Section("关于") {
-                    LabeledContent("版本", value: "1.6.6")
+                    LabeledContent("版本", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.7.0")
                     LabeledContent("系统", value: AppAppearance.systemDescription)
                     NavigationLink("第三方许可") {
                         ScrollView {
