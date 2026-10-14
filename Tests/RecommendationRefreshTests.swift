@@ -24,6 +24,8 @@ private final class TagCatalogProtocol: URLProtocol {
             rows = [["id": "204", "name": "正确的双标签漫画"], ["id": "205", "name": "相似标签漫画"]]
         } else if searchQuery == "校园" {
             rows = [["id": "201", "name": "真正含标签"], ["id": "202", "name": "仅含相似标签"]]
+        } else if searchQuery == "失效详情" {
+            rows = [["id": "203", "name": "已下架漫画"]]
         }
         if query.first(where: { $0.name == "main_tag" })?.value == "0" {
             rows.append(["id": "203", "name": "服务器混入的无关漫画"])
@@ -31,7 +33,7 @@ private final class TagCatalogProtocol: URLProtocol {
         let data: Any
         if url.path == "/search" {
             data = ["content": rows, "total": searchQuery == "纯爱" || searchQuery == "純愛" ? 100 : rows.count]
-        } else if id == "200" || id == "203" {
+        } else if id == "203" {
             data = [Any]()
         } else {
             data = ["id": id, "name": "fixture", "tags": tags]
@@ -119,6 +121,10 @@ final class RecommendationRefreshTests: XCTestCase {
         XCTAssertEqual(broad.map(\.id), ["200", "201", "202"])
         let broadQuery = URLComponents(url: TagCatalogProtocol.recorded()[0].url!, resolvingAgainstBaseURL: false)!.queryItems!
         XCTAssertEqual(broadQuery.first { $0.name == "main_tag" }?.value, "0")
+        let removedText = try await api.search("失效详情", page: 1)
+        let removedTag = try await api.searchTag("失效详情", page: 1)
+        XCTAssertTrue(removedText.isEmpty)
+        XCTAssertTrue(removedTag.isEmpty)
     }
     func testSearchQueryAndExactTagsNormalizeCaseWidthAndWhitespace() {
         XCTAssertEqual(ComicSearchQuery("  #AI绘图  "), .tag("AI绘图"))
