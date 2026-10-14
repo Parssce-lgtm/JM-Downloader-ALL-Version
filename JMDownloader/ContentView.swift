@@ -736,7 +736,12 @@ private struct ComicCardStyle: ViewModifier {
             .font(.caption)
             .monospacedDigit()
             .multilineTextAlignment(.center).lineLimit(2)
-            .opacity(max(0, 1 - abs(position - CGFloat(index)) * 2))
+            .opacity(noticeOpacity(at: index))
+    }
+    private func noticeOpacity(at index: Int) -> Double {
+        let distance: CGFloat = abs(position - CGFloat(index))
+        let visible: CGFloat = max(CGFloat.zero, CGFloat(1) - distance * CGFloat(2))
+        return Double(visible)
     }
     private var noticeIcons: some View {
         HStack {
