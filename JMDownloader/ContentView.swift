@@ -62,8 +62,8 @@ struct ContentView: View {
             }.font(.headline).foregroundStyle(.primary).buttonStyle(.plain).accessibilityIdentifier("scrollToTop")
             Spacer(minLength: 0)
             Button { presentSettings() } label: {
-                Image(systemName: "gearshape").font(.system(size: 19))
-                    .frame(width: 38, height: 38)
+                Image(systemName: "gearshape").font(.system(size: 18))
+                    .frame(width: 26, height: 26)
             }.modifier(HeaderActionStyle())
                 .frame(width: 44, height: 44)
                 .accessibilityLabel("设置").accessibilityIdentifier("settings")
@@ -682,7 +682,7 @@ private struct HeaderActionStyle: ViewModifier {
         #endif
     }
     private func traditional(_ content: Content) -> some View {
-        content.buttonStyle(.plain)
+        content.buttonStyle(.plain).frame(width: 44, height: 44)
             .background(Color(uiColor: .secondarySystemGroupedBackground), in: Circle())
             .overlay { Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.7).allowsHitTesting(false) }
     }
