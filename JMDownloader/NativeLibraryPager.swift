@@ -29,7 +29,7 @@ struct NativeLibraryTabs: UIViewRepresentable {
     }
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: TrackingLibraryTabs, context: Context) -> CGSize? {
         CGSize(width: proposal.width ?? uiView.intrinsicContentSize.width,
-               height: proposal.height ?? uiView.intrinsicContentSize.height)
+               height: uiView.intrinsicContentSize.height)
     }
     final class Coordinator: NSObject {
         var parent: NativeLibraryTabs
