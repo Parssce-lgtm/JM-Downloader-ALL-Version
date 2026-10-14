@@ -138,7 +138,7 @@ final class TrackingLibraryTabs: UISegmentedControl {
         let dark = traitCollection.userInterfaceStyle == .dark
         layer.borderWidth = traditional ? 0 : 0.8
         layer.borderColor = dark ? UIColor.white.withAlphaComponent(0.22).cgColor : UIColor.black.withAlphaComponent(0.08).cgColor
-        glassIndicator?.layer.borderWidth = dark ? 0.8 : 0.5
+        glassIndicator?.layer.borderWidth = dark ? 0 : 0.5
         glassIndicator?.layer.borderColor = dark ? UIColor.white.withAlphaComponent(0.23).cgColor : UIColor.white.withAlphaComponent(0.65).cgColor
         drawIndicator()
     }
