@@ -21,9 +21,8 @@ struct ContentView: View {
             let layout = AppLayout(width: geometry.size.width, height: geometry.size.height)
             VStack(spacing: 10) {
                 header.padding(.horizontal, layout.sideInset)
-                Picker("浏览类型", selection: $tab) {
-                    ForEach(LibraryTab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }.pickerStyle(.segmented).accessibilityIdentifier("libraryTabs").padding(.horizontal, layout.sideInset)
+                NativeLibraryTabs(selection: $tab, paging: paging)
+                    .padding(.horizontal, layout.sideInset)
                 NativeLibraryPager(selection: $tab, paging: paging, animated: !reduceMotion, pages: LibraryTab.allCases.map { item in
                     AnyView(LibraryModuleView(store: store, pageState: pageStates[item]!, tab: item, isActive: item == tab, bottomInset: bottomInset, onSettings: { settings = true })
                         .id(item).tint(store.preferences.accent).environment(\.appLayout, layout))
@@ -716,19 +715,10 @@ private struct ComicCardStyle: ViewModifier {
     @State private var position: CGFloat = 1
     var body: some View {
         ZStack {
-            ForEach(Array(LibraryTab.allCases.enumerated()), id: \.element) { index, page in
-                Text(message(for: page)).font(.caption).monospacedDigit()
-                    .multilineTextAlignment(.center).lineLimit(2)
-                    .padding(.horizontal, 52)
-                    .frame(maxWidth: .infinity)
-                    .opacity(max(0, 1 - abs(position - CGFloat(index)) * 2))
-            }
-            HStack {
-                Image(systemName: "text.bubble").font(.title3)
-                Spacer()
-                Image(systemName: "chevron.right").font(.caption2)
-                    .opacity(tab == .downloads ? 1 : 0)
-            }.padding(.horizontal, 22)
+            noticeText(.downloads, index: 0)
+            noticeText(.favorites, index: 1)
+            noticeText(.recommendations, index: 2)
+            noticeIcons
         }.foregroundStyle(.primary).frame(maxWidth: .infinity).frame(height: 66)
             .contentShape(Capsule())
             .onTapGesture { if tab == .downloads { onLogs() } }
@@ -738,6 +728,22 @@ private struct ComicCardStyle: ViewModifier {
             .modifier(NoticeCapsuleStyle(interactive: tab == .downloads))
             .accessibilityIdentifier("sharedNoticeCapsule")
             .onReceive(paging.positions) { position = $0 }
+    }
+    private func noticeText(_ page: LibraryTab, index: Int) -> some View {
+        Text(message(for: page))
+            .font(.caption).monospacedDigit()
+            .multilineTextAlignment(.center).lineLimit(2)
+            .padding(.horizontal, 52)
+            .frame(maxWidth: .infinity)
+            .opacity(max(0, 1 - abs(position - CGFloat(index)) * 2))
+    }
+    private var noticeIcons: some View {
+        HStack {
+            Image(systemName: "text.bubble").font(.title3)
+            Spacer()
+            Image(systemName: "chevron.right").font(.caption2)
+                .opacity(tab == .downloads ? 1 : 0)
+        }.padding(.horizontal, 22)
     }
     private func message(for page: LibraryTab) -> String {
         if page == .downloads { return store.logs.first?.text ?? "准备就绪 · 下载文件保存在文件 App" }

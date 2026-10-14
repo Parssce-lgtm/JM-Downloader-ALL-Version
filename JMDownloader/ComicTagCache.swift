@@ -63,8 +63,15 @@ enum ComicSearchQuery: Equatable, Sendable {
             ? .tag(String(value.dropFirst()).trimmingCharacters(in: .whitespacesAndNewlines)) : .text(value)
     }
     static func hasTag(_ comic: Comic, _ tag: String) -> Bool {
-        let expected = RecommendationRanking.normalized(tag)
-        return !expected.isEmpty && comic.tags.contains { RecommendationRanking.normalized($0) == expected }
+        let expected = normalizedTag(tag)
+        return !expected.isEmpty && comic.tags.contains { normalizedTag($0) == expected }
+    }
+    static func normalizedTag(_ tag: String) -> String {
+        let simplified = NSString(string: tag).applyingTransform(StringTransform(rawValue: "Traditional-Simplified"), reverse: false) ?? tag
+        return RecommendationRanking.normalized(simplified)
+    }
+    static func traditionalTag(_ tag: String) -> String {
+        NSString(string: tag).applyingTransform(StringTransform(rawValue: "Simplified-Traditional"), reverse: false) ?? tag
     }
     static func matchesText(_ comic: Comic, _ query: String) -> Bool {
         let expected = RecommendationRanking.normalized(query)

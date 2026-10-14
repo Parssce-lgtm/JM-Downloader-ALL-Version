@@ -206,7 +206,27 @@ actor JMAPI: ComicAPI {
         guard !tag.isEmpty else { throw JMError.message("请输入 # 后面的标签。") }
         let rows = try await sortedSearch(tag, page: page, sort: .latest, mainTag: "3")
         let full = try await ConcurrentLoad.map(rows, limit: 6) { try await self.recommendationDetail($0) }
-        return full.filter { ComicSearchQuery.hasTag($0, tag) }
+        let matching = full.filter { ComicSearchQuery.hasTag($0, tag) }
+        if !matching.isEmpty || ComicSearchQuery.traditionalTag(tag) == tag { return matching }
+        let alternate = try await sortedSearch(ComicSearchQuery.traditionalTag(tag), page: page, sort: .latest, mainTag: "3")
+        let alternateFull = try await ConcurrentLoad.map(alternate, limit: 6) { try await self.recommendationDetail($0) }
+        return alternateFull.filter { ComicSearchQuery.hasTag($0, tag) }
+    }
+    func searchTags(_ tags: [String], page: Int) async throws -> [Comic] {
+        guard tags.count >= 2, tags.allSatisfy({ !$0.isEmpty }) else { throw JMError.message("请输入完整标签。") }
+        // JM accepts +term +term as an AND search. Searching only the first
+        // tag's page misses comics that occur on later pages of that tag.
+        func matching(_ terms: [String]) async throws -> [Comic] {
+            let query = terms.map { "+" + $0 }.joined(separator: " ")
+            let rows = try await sortedSearch(query, page: page, sort: .latest)
+            let full = try await ConcurrentLoad.map(rows, limit: 6) { try await self.recommendationDetail($0) }
+            return full.filter { comic in tags.allSatisfy { ComicSearchQuery.hasTag(comic, $0) } }
+        }
+        let found = try await matching(tags)
+        if !found.isEmpty { return found }
+        let traditional = tags.map(ComicSearchQuery.traditionalTag)
+        if traditional == tags { return [] }
+        return try await matching(traditional)
     }
     private func sortedSearch(_ query: String, page: Int = 1, sort: RecommendationSort, mainTag: String = "0") async throws -> [Comic] {
         let data = try await request("/search", query: ["search_query": query, "page": "\(page)", "main_tag": mainTag, "o": sort.jmOrder, "t": "a"])

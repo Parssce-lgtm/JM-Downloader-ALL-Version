@@ -1,6 +1,20 @@
 import XCTest
 
 final class CompatibilityUITests: XCTestCase {
+    @MainActor func testTopTabsDragFromUnselectedSegment() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-fixture-v120", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launch()
+        let tabs = app.segmentedControls["libraryTabs"]
+        XCTAssertTrue(tabs.waitForExistence(timeout: 15))
+        XCTAssertTrue(tabs.buttons["漫画收藏"].isSelected)
+        let from = tabs.buttons["漫画推荐"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let to = tabs.buttons["下载任务"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        from.press(forDuration: 0.25, thenDragTo: to)
+        XCTAssertTrue(tabs.buttons["下载任务"].isSelected)
+        XCTAssertTrue(app.descendants(matching: .any)["jobCard-10002"].firstMatch.waitForExistence(timeout: 5))
+        capture(app, "top-tabs-drag-from-unselected")
+    }
     @MainActor func testUnifiedNavigationCardsAndActions() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "--long-library-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
