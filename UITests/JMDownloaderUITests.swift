@@ -174,8 +174,10 @@ final class JMDownloaderUITests: XCTestCase {
         XCTAssertTrue(app.buttons["settings"].waitForExistence(timeout: 10))
         app.buttons["settings"].tap(); app.buttons["tagBlacklist"].tap()
         XCTAssertTrue(app.navigationBars["黑名单"].waitForExistence(timeout: 5))
-        let field = app.descendants(matching: .any)["titleBlacklistField"].firstMatch
-        XCTAssertTrue(field.waitForExistence(timeout: 5)); field.tap(); field.typeText("侦探")
+        let field = app.textFields["titleBlacklistField"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5)); field.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        app.typeText("侦探")
         app.buttons["保存"].tap()
         app.buttons["tagBlacklist"].tap()
         XCTAssertEqual(field.value as? String, "侦探")

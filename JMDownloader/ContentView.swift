@@ -723,7 +723,9 @@ private struct NoticeCapsuleStyle: ViewModifier {
         if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
             // Keep the same outline in a footer and a scrolling-list overlay.
             // Regular glass softens artwork behind the notice instead of magnifying it.
-            content.glassEffect(.regular.interactive(interactive), in: Capsule())
+            content
+                .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.6), in: Capsule())
+                .glassEffect(.regular.interactive(interactive), in: Capsule())
                 .contentShape(.accessibility, Rectangle())
         } else {
             traditional(content)

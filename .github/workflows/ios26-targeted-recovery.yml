@@ -1,4 +1,4 @@
-name: Recover one iOS 26 check and build IPA
+name: Focused iOS 26 checks and unified IPA
 on:
   workflow_dispatch:
     inputs:
@@ -6,8 +6,8 @@ on:
         description: Frozen source commit to verify and build
         required: true
         type: string
-      test_identifier:
-        description: Single XCTest identifier to recheck
+      test_identifiers:
+        description: Comma-separated XCTest identifiers to recheck
         required: true
         type: string
 permissions:
@@ -29,16 +29,22 @@ jobs:
           git rev-parse HEAD
       - name: Recheck the selected test
         env:
-          JM_RECHECK_TEST: ${{ inputs.test_identifier }}
+          JM_RECHECK_TESTS: ${{ inputs.test_identifiers }}
         run: |
           set -euo pipefail
-          [[ "$JM_RECHECK_TEST" == JMDownloaderUITests/*/* ]]
+          IFS=',' read -r -a SELECTED <<< "$JM_RECHECK_TESTS"
+          TEST_FLAGS=()
+          for CASE in "${SELECTED[@]}"; do
+            [[ "$CASE" =~ ^JMDownloaderUITests/[A-Za-z0-9_]+/[A-Za-z0-9_]+$ ]]
+            TEST_FLAGS+=("-only-testing:$CASE")
+          done
+          [[ ${#TEST_FLAGS[@]} -gt 0 ]]
           mkdir -p build
           trap 'xcrun xcresulttool export attachments --path build/Recheck.xcresult --output-path build/screenshots || true' EXIT
           DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); names=[x for k,v in d["devices"].items() if "iOS-26" in k for x in v if x["name"]=="iPhone 17 Pro Max"]; assert names; print(names[0]["udid"])')
           xcodebuild test -project JMDownloader.xcodeproj -scheme JMDownloader \
             -destination "platform=iOS Simulator,id=$DEVICE" -parallel-testing-enabled NO \
-            -only-testing:"$JM_RECHECK_TEST" -derivedDataPath build/DerivedData \
+            "${TEST_FLAGS[@]}" -derivedDataPath build/DerivedData \
             -resultBundlePath build/Recheck.xcresult CODE_SIGNING_ALLOWED=NO
       - name: Build single unsigned device IPA
         run: bash scripts/build-unsigned-ipa.sh
