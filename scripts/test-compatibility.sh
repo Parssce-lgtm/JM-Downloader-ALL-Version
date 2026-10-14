@@ -21,7 +21,23 @@ export_results() {
   exit "$status"
 }
 trap export_results EXIT
-xcodebuild test -project JMDownloader.xcodeproj -scheme JMDownloader \
-  -destination "platform=iOS Simulator,id=$DEVICE" -parallel-testing-enabled NO \
-  -only-testing:JMDownloaderTests -only-testing:JMDownloaderUITests/CompatibilityUITests \
-  -derivedDataPath build/CompatibilityDerivedData -resultBundlePath build/Compatibility.xcresult CODE_SIGNING_ALLOWED=NO
+xcrun simctl boot "$DEVICE"
+xcrun simctl bootstatus "$DEVICE" -b
+run_tests() {
+  xcodebuild test -project JMDownloader.xcodeproj -scheme JMDownloader \
+    -destination "platform=iOS Simulator,id=$DEVICE" -parallel-testing-enabled NO \
+    -only-testing:JMDownloaderTests -only-testing:JMDownloaderUITests/CompatibilityUITests \
+    -derivedDataPath build/CompatibilityDerivedData -resultBundlePath "$1" CODE_SIGNING_ALLOWED=NO
+}
+if run_tests build/Compatibility-first.xcresult 2>&1 | tee build/compatibility-first.log; then
+  mv build/Compatibility-first.xcresult build/Compatibility.xcresult
+elif grep -Eiq 'FBSApplicationLibrary returned nil|Timed out waiting for AX loaded notification|test runner failed to initialize' build/compatibility-first.log; then
+  echo 'Simulator test runner did not start; retrying once with a fresh boot.'
+  xcrun simctl shutdown "$DEVICE" || true
+  xcrun simctl erase "$DEVICE"
+  xcrun simctl boot "$DEVICE"
+  xcrun simctl bootstatus "$DEVICE" -b
+  run_tests build/Compatibility.xcresult
+else
+  exit 1
+fi
