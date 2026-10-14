@@ -45,11 +45,14 @@ struct NativeLibraryTabs: UIViewRepresentable {
 /// UIControl tracking also accepts a gesture that begins over an unselected tab.
 final class TrackingLibraryTabs: UISegmentedControl {
     private let indicator = CALayer()
+    private let glassMask = CAShapeLayer()
     private var glassIndicator: UIVisualEffectView?
     private var glassLabels: [UILabel] = []
     private var subscription: AnyCancellable?
     private let paging: LibraryPagingPosition
     private var position: CGFloat = 1
+    private var glassMaskSize: CGSize = .zero
+    private var glassMaskDark = false
     var indicatorFrame: CGRect { indicator.frame }
 
     init(paging: LibraryPagingPosition) {
@@ -78,6 +81,8 @@ final class TrackingLibraryTabs: UISegmentedControl {
             glass.isAccessibilityElement = false
             glass.clipsToBounds = true
             glass.cornerConfiguration = .capsule()
+            glassMask.fillColor = UIColor.black.cgColor
+            glass.layer.mask = glassMask
             // UISegmentedControl draws private segment backgrounds above index 0.
             // Keep the glass above those backgrounds and put our text above it.
             addSubview(glass)
@@ -155,6 +160,20 @@ final class TrackingLibraryTabs: UISegmentedControl {
         indicator.shadowColor = UIColor.black.cgColor; indicator.shadowOpacity = traditional ? 0.12 : 0
         indicator.shadowRadius = 2; indicator.shadowOffset = CGSize(width: 0, height: 1)
         glassIndicator?.frame = indicator.frame
+        if let glassIndicator {
+            let dark = traitCollection.userInterfaceStyle == .dark
+            let bounds = glassIndicator.bounds
+            if glassMaskSize != bounds.size || glassMaskDark != dark {
+                glassMaskSize = bounds.size
+                glassMaskDark = dark
+                let edgeInset: CGFloat = dark ? 2 : 0
+                glassMask.frame = bounds
+                glassMask.path = UIBezierPath(
+                    roundedRect: bounds.insetBy(dx: edgeInset, dy: edgeInset),
+                    cornerRadius: max(0, (bounds.height - edgeInset * 2) / 2)
+                ).cgPath
+            }
+        }
         for (index, label) in glassLabels.enumerated() {
             label.frame = CGRect(x: inset + CGFloat(index) * segment, y: inset, width: segment, height: height)
             label.font = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .subheadline).pointSize,
