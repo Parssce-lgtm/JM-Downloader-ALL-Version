@@ -731,11 +731,11 @@ private struct ComicCardStyle: ViewModifier {
     }
     private func noticeText(_ page: LibraryTab, index: Int) -> some View {
         Text(message(for: page))
-            .monospacedDigit()
-            .multilineTextAlignment(.center).lineLimit(2)
             .padding(.horizontal, 52)
             .frame(maxWidth: .infinity)
             .font(.caption)
+            .monospacedDigit()
+            .multilineTextAlignment(.center).lineLimit(2)
             .opacity(max(0, 1 - abs(position - CGFloat(index)) * 2))
     }
     private var noticeIcons: some View {
