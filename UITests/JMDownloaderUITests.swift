@@ -203,6 +203,11 @@ final class JMDownloaderUITests: XCTestCase {
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))
         let pager = app.scrollViews["libraryPager"]
         XCTAssertTrue(pager.exists)
+        let notice = app.descendants(matching: .any)["sharedNoticeCapsule"].firstMatch
+        XCTAssertTrue(notice.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "sharedNoticeCapsule").count, 1)
+        let initialNoticeFrame = notice.frame
+        let favoriteMessage = notice.label
         attach(app, name: "29-light-liquid-glass-rounded-cards")
         let start = pager.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.5))
         let end = pager.coordinate(withNormalizedOffset: CGVector(dx: 0.55, dy: 0.5))
@@ -213,23 +218,37 @@ final class JMDownloaderUITests: XCTestCase {
         pager.swipeLeft()
         XCTAssertTrue(app.scrollViews["libraryScroll-漫画推荐"].waitForExistence(timeout: 5))
         XCTAssertTrue(tabs.buttons["漫画推荐"].isSelected)
+        XCTAssertTrue(waitForLabel(notice, containing: "推荐加载完成"))
+        XCTAssertNotEqual(notice.label, favoriteMessage)
+        XCTAssertEqual(notice.frame.minX, initialNoticeFrame.minX, accuracy: 1.5)
+        XCTAssertEqual(notice.frame.maxY, initialNoticeFrame.maxY, accuracy: 1.5)
+        XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "sharedNoticeCapsule").count, 1)
         attach(app, name: "38-light-recommendation-notice-over-cards")
         pager.swipeRight()
         XCTAssertTrue(app.scrollViews["libraryScroll-漫画收藏"].waitForExistence(timeout: 5))
+        XCTAssertTrue(waitForLabel(notice, containing: favoriteMessage))
+        XCTAssertEqual(notice.label, favoriteMessage)
         pager.swipeRight()
         XCTAssertTrue(app.buttons["startAll"].waitForExistence(timeout: 5))
         XCTAssertTrue(tabs.buttons["下载任务"].isSelected)
+        XCTAssertFalse(app.staticTexts["提示记录"].exists)
+        XCTAssertEqual(notice.frame.minX, initialNoticeFrame.minX, accuracy: 1.5)
+        XCTAssertEqual(notice.frame.maxY, initialNoticeFrame.maxY, accuracy: 1.5)
         attach(app, name: "39-light-download-notice-capsule")
+        notice.tap()
+        XCTAssertTrue(app.navigationBars["提示记录"].waitForExistence(timeout: 5))
+        app.navigationBars["提示记录"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.segmentedControls["libraryTabs"].waitForExistence(timeout: 5))
         app.terminate()
         app.launchArguments += ["--dark-fixture"]
         app.launch()
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))
         tabs.buttons["下载任务"].tap()
-        XCTAssertTrue(app.buttons["logCapsule"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["sharedNoticeCapsule"].waitForExistence(timeout: 5))
         attach(app, name: "30-dark-liquid-glass-rounded-cards")
         for module in ["漫画收藏", "漫画推荐"] {
             tabs.buttons[module].tap()
-            XCTAssertTrue(app.descendants(matching: .any)["libraryLoadNotice-" + module].firstMatch.waitForExistence(timeout: 5))
+            XCTAssertTrue(app.descendants(matching: .any)["sharedNoticeCapsule"].firstMatch.waitForExistence(timeout: 5))
             attach(app, name: "40-dark-notice-over-cards-" + module)
         }
     }
@@ -241,12 +260,12 @@ final class JMDownloaderUITests: XCTestCase {
         let status = app.staticTexts["librarySearching"]
         XCTAssertTrue(status.waitForExistence(timeout: 10))
         XCTAssertEqual(status.label, "正在加载")
-        let notice = app.descendants(matching: .any)["libraryLoadNotice-漫画收藏"].firstMatch
+        let notice = app.descendants(matching: .any)["sharedNoticeCapsule"].firstMatch
         XCTAssertTrue(notice.waitForExistence(timeout: 5))
         XCTAssertTrue(waitForLabel(notice, containing: "4/20"))
         XCTAssertTrue(notice.label.contains("4/20"))
         XCTAssertTrue(notice.label.contains("20%"))
-        XCTAssertFalse(app.buttons["libraryLoadNotice-漫画收藏"].exists)
+        XCTAssertFalse(app.buttons["sharedNoticeCapsule"].exists)
         notice.tap()
         XCTAssertFalse(app.buttons["closeLogHistory"].exists)
         XCTAssertTrue(status.exists)
@@ -261,10 +280,10 @@ final class JMDownloaderUITests: XCTestCase {
         XCTAssertTrue(app.buttons["cover-10003"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["librarySearching"].exists)
         XCTAssertFalse(app.staticTexts["libraryDisconnected"].exists)
-        let notice = app.descendants(matching: .any)["libraryLoadNotice-漫画推荐"].firstMatch
+        let notice = app.descendants(matching: .any)["sharedNoticeCapsule"].firstMatch
         XCTAssertTrue(waitForLabel(notice, containing: "核验推荐漫画"))
         XCTAssertFalse(notice.label.contains("提示记录"))
-        XCTAssertFalse(app.buttons["libraryLoadNotice-漫画推荐"].exists)
+        XCTAssertFalse(app.buttons["sharedNoticeCapsule"].exists)
         attach(app, name: "24-recommendation-results-with-progress")
         app.swipeRight()
         XCTAssertTrue(app.buttons["收藏夹"].waitForExistence(timeout: 5))
@@ -319,7 +338,7 @@ final class JMDownloaderUITests: XCTestCase {
             scroll.swipeUp()
             XCTAssertTrue(lastCover.isHittable)
             XCTAssertLessThan(lastCover.frame.maxY, app.frame.maxY - 20)
-            let notice = app.descendants(matching: .any)["libraryLoadNotice-" + module].firstMatch
+            let notice = app.descendants(matching: .any)["sharedNoticeCapsule"].firstMatch
             XCTAssertLessThan(lastCover.frame.maxY, notice.frame.minY)
             attach(app, name: "22-bottom-clear-" + module)
             lastCover.tap()
@@ -338,7 +357,7 @@ final class JMDownloaderUITests: XCTestCase {
         XCTAssertFalse(exportLabel.label.contains("/"))
         XCTAssertTrue(app.descendants(matching: .any)["jobProgress-10002"].firstMatch.label.contains("从右向左"))
         attach(app, name: "25-pdf-export-percent-right-to-left")
-        app.buttons["logCapsule"].tap()
+        app.buttons["sharedNoticeCapsule"].tap()
         XCTAssertTrue(app.navigationBars["提示记录"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["closeLogHistory"].exists)
         XCTAssertFalse(app.buttons["完成"].exists)

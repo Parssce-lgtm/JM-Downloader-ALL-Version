@@ -2,123 +2,13 @@ import SwiftUI
 import UIKit
 import Combine
 
-// Only the tab indicator subscribes to these frame-by-frame updates. The
+// Only the shared notice viewport subscribes to these frame-by-frame updates. The
 // SwiftUI page tree does not rebuild while the finger is moving.
 @MainActor final class LibraryPagingPosition {
     let positions = CurrentValueSubject<CGFloat, Never>(1)
     func report(_ position: CGFloat) {
         let next = min(CGFloat(LibraryTab.allCases.count - 1), max(0, position))
         if abs(positions.value - next) > 0.0001 { positions.send(next) }
-    }
-}
-
-struct NativeLibraryTabs: UIViewRepresentable {
-    @Binding var selection: LibraryTab
-    let paging: LibraryPagingPosition
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
-    func makeUIView(context: Context) -> TrackingLibraryTabs {
-        let control = TrackingLibraryTabs(paging: paging)
-        control.addTarget(context.coordinator, action: #selector(Coordinator.selectTab(_:)), for: .valueChanged)
-        return control
-    }
-    func updateUIView(_ control: TrackingLibraryTabs, context: Context) {
-        context.coordinator.parent = self
-        control.selectedSegmentIndex = LibraryTab.allCases.firstIndex(of: selection)!
-    }
-    func sizeThatFits(_ proposal: ProposedViewSize, uiView: TrackingLibraryTabs, context: Context) -> CGSize? {
-        CGSize(width: proposal.width ?? uiView.intrinsicContentSize.width,
-               height: proposal.height ?? uiView.intrinsicContentSize.height)
-    }
-    final class Coordinator: NSObject {
-        var parent: NativeLibraryTabs
-        init(_ parent: NativeLibraryTabs) { self.parent = parent }
-        @objc func selectTab(_ control: UISegmentedControl) {
-            guard LibraryTab.allCases.indices.contains(control.selectedSegmentIndex) else { return }
-            parent.selection = LibraryTab.allCases[control.selectedSegmentIndex]
-        }
-    }
-}
-
-// Keep the native segmented control's buttons, selected traits and VoiceOver
-// behavior. Its public background-image API lets our indicator move freely.
-final class TrackingLibraryTabs: UISegmentedControl {
-    private let indicator = CALayer()
-    private var glassIndicator: UIVisualEffectView?
-    private var subscription: AnyCancellable?
-    private var position: CGFloat = 1
-    var indicatorFrame: CGRect { indicator.frame }
-
-    init(paging: LibraryPagingPosition) {
-        super.init(frame: .zero)
-        for (index, tab) in LibraryTab.allCases.enumerated() {
-            insertSegment(withTitle: tab.rawValue, at: index, animated: false)
-        }
-        accessibilityIdentifier = "libraryTabs"
-        accessibilityLabel = "浏览类型"
-        selectedSegmentTintColor = .clear
-        let format = UIGraphicsImageRendererFormat(); format.opaque = false
-        let clear = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1), format: format).image { _ in }
-        let states: [UIControl.State] = [.normal, .selected, .highlighted, [.selected, .highlighted]]
-        for state in states { setBackgroundImage(clear, for: state, barMetrics: .default) }
-        for left in states { for right in states {
-            setDividerImage(clear, forLeftSegmentState: left, rightSegmentState: right, barMetrics: .default)
-        } }
-        layer.insertSublayer(indicator, at: 0)
-        #if compiler(>=6.2)
-        if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
-            let effect = UIGlassEffect(style: .regular)
-            effect.isInteractive = true
-            let glass = UIVisualEffectView(effect: effect)
-            glass.isUserInteractionEnabled = false
-            glass.isAccessibilityElement = false
-            glass.clipsToBounds = true
-            glass.cornerConfiguration = .capsule()
-            insertSubview(glass, at: 0)
-            glassIndicator = glass
-            indicator.isHidden = true
-        }
-        #endif
-        layer.masksToBounds = true
-        subscription = paging.positions.sink { [weak self] value in
-            self?.position = value
-            self?.drawIndicator()
-        }
-        updateAppearance()
-    }
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-    override var intrinsicContentSize: CGSize {
-        CGSize(width: super.intrinsicContentSize.width,
-               height: max(34, UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 12))
-    }
-    override func layoutSubviews() { super.layoutSubviews(); drawIndicator() }
-    override func traitCollectionDidChange(_ previous: UITraitCollection?) {
-        super.traitCollectionDidChange(previous); updateAppearance()
-    }
-    private var traditional: Bool {
-        if #available(iOS 26.0, *), !AppAppearance.forceTraditional { return false }
-        return true
-    }
-    private func updateAppearance() {
-        backgroundColor = traditional ? .tertiarySystemFill : .clear
-        let size = UIFont.preferredFont(forTextStyle: .subheadline).pointSize
-        setTitleTextAttributes([.foregroundColor: UIColor.label, .font: UIFont.systemFont(ofSize: size, weight: .medium)], for: .normal)
-        setTitleTextAttributes([.foregroundColor: UIColor.label, .font: UIFont.systemFont(ofSize: size, weight: .semibold)], for: .selected)
-        drawIndicator()
-    }
-    private func drawIndicator() {
-        guard numberOfSegments > 0 else { return }
-        let inset: CGFloat = 3
-        let segment = max(0, bounds.width - inset * 2) / CGFloat(numberOfSegments)
-        let height = max(0, bounds.height - inset * 2)
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        layer.cornerRadius = traditional ? 8 : bounds.height / 2
-        indicator.frame = CGRect(x: inset + position * segment, y: inset, width: segment, height: height)
-        indicator.cornerRadius = traditional ? 6 : height / 2
-        indicator.backgroundColor = (traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.36, alpha: 1) : UIColor.white).cgColor
-        indicator.shadowColor = UIColor.black.cgColor; indicator.shadowOpacity = traditional ? 0.12 : 0
-        indicator.shadowRadius = 2; indicator.shadowOffset = CGSize(width: 0, height: 1)
-        glassIndicator?.frame = indicator.frame
-        CATransaction.commit()
     }
 }
 

@@ -57,39 +57,28 @@ final class CompatibilityTests: XCTestCase {
         XCTAssertEqual(values.last!, "蓝")
         subscription.cancel()
     }
-    @MainActor func testFractionalPagingMovesIndicatorBeforeSelectingNextTab() {
+    @MainActor func testFractionalPagingReportsNoticePositionBeforeSelectingNextTab() {
         let paging = LibraryPagingPosition()
-        let tabs = TrackingLibraryTabs(paging: paging)
-        tabs.frame = CGRect(x: 0, y: 0, width: 358, height: 34)
-        tabs.selectedSegmentIndex = 1; tabs.layoutIfNeeded()
         let pager = LibraryPagerController()
         pager.onPosition = { paging.report($0) }
         var selections: [Int] = []
-        pager.onSelection = { selections.append($0); tabs.selectedSegmentIndex = $0 }
+        pager.onSelection = { selections.append($0) }
         pager.update(pages: LibraryTab.allCases.map { AnyView(Text($0.rawValue)) }, selectedIndex: 1, animated: false)
         pager.view.frame = CGRect(x: 0, y: 0, width: 390, height: 560)
         pager.view.layoutIfNeeded()
         let scroll = pager.view.subviews.compactMap { $0 as? UIScrollView }.first!
-        let initial = tabs.indicatorFrame
         scroll.setContentOffset(CGPoint(x: 390 * 1.25, y: 0), animated: false)
         XCTAssertEqual(paging.positions.value, 1.25, accuracy: 0.001)
-        XCTAssertEqual(tabs.indicatorFrame.midX - initial.midX, initial.width / 4, accuracy: 0.5)
-        XCTAssertEqual(tabs.selectedSegmentIndex, 1)
         XCTAssertTrue(selections.isEmpty)
-        let image = UIGraphicsImageRenderer(bounds: tabs.bounds).image { tabs.layer.render(in: $0.cgContext) }
-        let shot = XCTAttachment(image: image); shot.name = "tab-indicator-mid-swipe-25-percent"; shot.lifetime = .keepAlways; add(shot)
         scroll.setContentOffset(CGPoint(x: 390 * 1.75, y: 0), animated: false)
-        XCTAssertEqual(tabs.indicatorFrame.midX - initial.midX, initial.width * 0.75, accuracy: 0.5)
-        XCTAssertEqual(tabs.selectedSegmentIndex, 1)
+        XCTAssertEqual(paging.positions.value, 1.75, accuracy: 0.001)
+        XCTAssertTrue(selections.isEmpty)
         scroll.setContentOffset(CGPoint(x: 780, y: 0), animated: false)
         pager.scrollViewDidEndDragging(scroll, willDecelerate: false)
-        XCTAssertEqual(selections, [2]); XCTAssertEqual(tabs.selectedSegmentIndex, 2)
+        XCTAssertEqual(selections, [2])
     }
-    @MainActor func testCancelledPagingRestoresIndicatorAndResizesWithoutLosingPosition() {
+    @MainActor func testCancelledPagingRestoresNoticePositionAcrossViewportChanges() {
         let paging = LibraryPagingPosition()
-        let tabs = TrackingLibraryTabs(paging: paging)
-        tabs.frame = CGRect(x: 0, y: 0, width: 351, height: 34)
-        tabs.selectedSegmentIndex = 1; tabs.layoutIfNeeded()
         let pager = LibraryPagerController()
         pager.onPosition = { paging.report($0) }
         var selections: [Int] = []
@@ -97,21 +86,16 @@ final class CompatibilityTests: XCTestCase {
         pager.update(pages: LibraryTab.allCases.map { AnyView(Text($0.rawValue)) }, selectedIndex: 1, animated: false)
         pager.view.frame = CGRect(x: 0, y: 0, width: 375, height: 560); pager.view.layoutIfNeeded()
         let scroll = pager.view.subviews.compactMap { $0 as? UIScrollView }.first!
-        let initial = tabs.indicatorFrame
         scroll.setContentOffset(CGPoint(x: 375 * 1.4, y: 0), animated: false)
-        XCTAssertGreaterThan(tabs.indicatorFrame.minX, initial.minX)
+        XCTAssertEqual(paging.positions.value, 1.4, accuracy: 0.001)
         scroll.setContentOffset(CGPoint(x: 375, y: 0), animated: false)
         pager.scrollViewDidEndDragging(scroll, willDecelerate: false)
-        XCTAssertEqual(tabs.indicatorFrame, initial); XCTAssertTrue(selections.isEmpty)
+        XCTAssertEqual(paging.positions.value, 1); XCTAssertTrue(selections.isEmpty)
         pager.view.frame.size.width = 430; pager.view.setNeedsLayout(); pager.view.layoutIfNeeded()
-        tabs.frame.size.width = 398; tabs.layoutIfNeeded()
         XCTAssertEqual(paging.positions.value, 1)
-        XCTAssertEqual(tabs.indicatorFrame.midX, tabs.bounds.midX, accuracy: 0.5)
         scroll.setContentOffset(CGPoint(x: -20, y: 0), animated: false)
         XCTAssertEqual(paging.positions.value, 0)
-        XCTAssertGreaterThanOrEqual(tabs.indicatorFrame.minX, 0)
         scroll.setContentOffset(CGPoint(x: 430 * 3, y: 0), animated: false)
         XCTAssertEqual(paging.positions.value, 2)
-        XCTAssertLessThanOrEqual(tabs.indicatorFrame.maxX, tabs.bounds.maxX)
     }
 }

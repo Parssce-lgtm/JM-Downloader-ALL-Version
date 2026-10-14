@@ -12,7 +12,6 @@ struct ContentView: View {
     @State private var logHistory = false
     @State private var tab: LibraryTab = .favorites
     @State private var paging = LibraryPagingPosition()
-    @ScaledMetric(relativeTo: .subheadline) private var tabsHeight: CGFloat = 34
     @State private var bottomInset: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pageStates = Dictionary(uniqueKeysWithValues: LibraryTab.allCases.map { ($0, LibraryPageState()) })
@@ -22,15 +21,21 @@ struct ContentView: View {
             let layout = AppLayout(width: geometry.size.width, height: geometry.size.height)
             VStack(spacing: 10) {
                 header.padding(.horizontal, layout.sideInset)
-                NativeLibraryTabs(selection: $tab, paging: paging)
-                    .frame(maxWidth: .infinity).frame(height: tabsHeight)
-                    .modifier(LibraryTabsGlassStyle()).padding(.horizontal, layout.sideInset)
+                Picker("浏览类型", selection: $tab) {
+                    ForEach(LibraryTab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }.pickerStyle(.segmented).accessibilityIdentifier("libraryTabs").padding(.horizontal, layout.sideInset)
                 NativeLibraryPager(selection: $tab, paging: paging, animated: !reduceMotion, pages: LibraryTab.allCases.map { item in
-                    AnyView(LibraryModuleView(store: store, pageState: pageStates[item]!, tab: item, isActive: item == tab, bottomInset: bottomInset, onSettings: { settings = true }, onLogs: { logHistory = true })
+                    AnyView(LibraryModuleView(store: store, pageState: pageStates[item]!, tab: item, isActive: item == tab, bottomInset: bottomInset, onSettings: { settings = true })
                         .id(item).tint(store.preferences.accent).environment(\.appLayout, layout))
                 })
             }.frame(maxWidth: layout.contentWidth).frame(maxWidth: .infinity)
                 .ignoresSafeArea(.container, edges: .bottom).background(Color(uiColor: .systemGroupedBackground))
+                .overlay(alignment: .bottom) {
+                    SharedLibraryNotice(store: store, favorites: pageStates[.favorites]!, recommendations: pageStates[.recommendations]!, tab: tab, paging: paging, onLogs: { logHistory = true })
+                        .padding(.horizontal, layout.noticeInset(bottomSafeArea: bottomInset))
+                        .frame(maxWidth: layout.contentWidth)
+                        .padding(.bottom, layout.noticeInset(bottomSafeArea: bottomInset))
+                }
             }
             .navigationTitle("JM downloader").navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
@@ -113,7 +118,6 @@ private struct LibraryModuleView: View {
     let isActive: Bool
     let bottomInset: CGFloat
     let onSettings: () -> Void
-    let onLogs: () -> Void
     private var folder: String {
         get { pageState.folder }
         nonmutating set { pageState.folder = newValue }
@@ -289,7 +293,6 @@ private struct LibraryModuleView: View {
             }
             }
         }.padding(.horizontal, layout.sideInset).padding(.top, 8)
-            .overlay(alignment: .bottom) { libraryLoadCapsule.padding(.horizontal, layout.noticeInset(bottomSafeArea: bottomInset)).padding(.bottom, layout.noticeInset(bottomSafeArea: bottomInset)) }
     }
     private var controls: some View {
         HStack(spacing: 18) {
@@ -361,19 +364,6 @@ private struct LibraryModuleView: View {
                     .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }
         }.frame(maxWidth: .infinity).padding(.vertical, 20)
-    }
-    private var libraryLoadCapsule: some View {
-        let progress = globalSearch ? searchState.load : (tab == .favorites ? store.favoriteLoad : store.recommendationLoad)
-        let failure = globalSearch ? searchState.failure : (tab == .favorites ? store.favoriteFailure : (store.recommendationFailure ?? store.favoriteFailure))
-        let text = failure.map { (failureKind == .network ? "网络已断开 · " : "加载失败 · ") + $0 }
-            ?? (busy ? progress.text : (progress.fraction == 1 ? progress.stage : "准备就绪"))
-        return ZStack {
-            Text(text).font(.caption).monospacedDigit().multilineTextAlignment(.center).lineLimit(2)
-                .frame(maxWidth: .infinity).padding(.horizontal, 52)
-            HStack { Image(systemName: "text.bubble").font(.title3); Spacer() }.padding(.horizontal, 22)
-        }.foregroundStyle(.primary).padding(.vertical, 14)
-            .frame(maxWidth: .infinity, minHeight: 66).modifier(NoticeCapsuleStyle(transparent: true))
-            .accessibilityElement(children: .combine).accessibilityIdentifier("libraryLoadNotice-" + tab.rawValue)
     }
     private func comicRow(_ comic: Comic) -> some View {
         HStack(spacing: 10) {
@@ -448,28 +438,12 @@ private struct LibraryModuleView: View {
                         }.frame(maxWidth: .infinity).padding(.vertical, 30)
                     }
                     ForEach(tasks) { job in jobRow(job) }
-                }.padding(.horizontal, layout.sideInset).padding(.bottom, 8)
-            }.scrollIndicators(.hidden)
+                }.padding(.horizontal, layout.sideInset).padding(.bottom, 100 + bottomInset)
+            }.scrollIndicators(.hidden).appHideBottomEdgeEffect()
                 .onChangeCompat(of: pageState.scrollToTopRequest) { _, _ in
                     withAnimation(.appTransition) { reader.scrollTo("queueTop", anchor: .top) }
                 }
             }
-            Button(action: onLogs) {
-                HStack(alignment: .center, spacing: 12) {
-                    Image(systemName: "text.bubble").font(.title3)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("提示记录").font(.caption.weight(.semibold))
-                        Text(store.logs.first?.text ?? "准备就绪 · 下载文件保存在文件 App")
-                            .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right").font(.caption2)
-                }.foregroundStyle(.primary).padding(.horizontal, 22).padding(.vertical, 14)
-                    .frame(maxWidth: .infinity, minHeight: 66)
-                    .modifier(NoticeCapsuleStyle(interactive: true))
-                    .contentShape(Capsule())
-            }.buttonStyle(.plain).accessibilityIdentifier("logCapsule")
-                .padding(.horizontal, layout.noticeInset(bottomSafeArea: bottomInset)).padding(.bottom, layout.noticeInset(bottomSafeArea: bottomInset)).padding(.top, 6)
         }
     }
     private func jobRow(_ job: DownloadJob) -> some View {
@@ -717,17 +691,66 @@ private struct ComicCardStyle: ViewModifier {
     }
 }
 
-private struct LibraryTabsGlassStyle: ViewModifier {
+// The shell belongs to the root, not to any cached paging host. Only its
+// message viewport follows the finger; each page keeps its own source of text.
+@MainActor private struct SharedLibraryNotice: View {
+    @ObservedObject var store: AppStore
+    @ObservedObject var favorites: LibraryPageState
+    @ObservedObject var recommendations: LibraryPageState
+    let tab: LibraryTab
+    let paging: LibraryPagingPosition
+    let onLogs: () -> Void
+    @State private var position: CGFloat = 1
+    var body: some View {
+        ZStack {
+            GeometryReader { geometry in
+                HStack(spacing: 0) {
+                    ForEach(LibraryTab.allCases, id: \.self) { page in
+                        Text(message(for: page)).font(.caption).monospacedDigit()
+                            .multilineTextAlignment(.center).lineLimit(2)
+                            .padding(.horizontal, 52)
+                            .frame(width: geometry.size.width, height: 66)
+                    }
+                }.offset(x: -position * geometry.size.width)
+            }.clipped()
+            HStack {
+                Image(systemName: "text.bubble").font(.title3)
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption2)
+                    .opacity(tab == .downloads ? 1 : 0)
+            }.padding(.horizontal, 22)
+        }.foregroundStyle(.primary).frame(maxWidth: .infinity).frame(height: 66)
+            .contentShape(Capsule())
+            .onTapGesture { if tab == .downloads { onLogs() } }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(message(for: tab))
+            .modifier(NoticeAccessibility(interactive: tab == .downloads, onLogs: onLogs))
+            .modifier(NoticeCapsuleStyle(interactive: tab == .downloads, transparent: tab != .downloads))
+            .accessibilityIdentifier("sharedNoticeCapsule")
+            .onReceive(paging.positions) { position = $0 }
+    }
+    private func message(for page: LibraryTab) -> String {
+        if page == .downloads { return store.logs.first?.text ?? "准备就绪 · 下载文件保存在文件 App" }
+        let state = page == .favorites ? favorites : recommendations
+        let search = store.searchState(page == .favorites ? .favorites : .recommendations)
+        let progress = state.globalSearch ? search.load : (page == .favorites ? store.favoriteLoad : store.recommendationLoad)
+        let failure = state.globalSearch ? search.failure : (page == .favorites ? store.favoriteFailure : (store.recommendationFailure ?? store.favoriteFailure))
+        let kind = !store.connected ? LibraryFailureKind.load : (state.globalSearch ? search.failureKind : (page == .favorites ? store.favoriteFailureKind : (store.recommendationFailureKind ?? store.favoriteFailureKind))) ?? .load
+        let busy = store.signingIn || (state.globalSearch ? search.searching : (page == .favorites ? store.refreshing : (store.recommending || store.refreshing)))
+        return failure.map { (kind == .network ? "网络已断开 · " : "加载失败 · ") + $0 }
+            ?? (busy ? progress.text : (progress.fraction == 1 ? progress.stage : "准备就绪"))
+    }
+}
+
+private struct NoticeAccessibility: ViewModifier {
+    let interactive: Bool
+    let onLogs: () -> Void
     func body(content: Content) -> some View {
-        #if compiler(>=6.2)
-        if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
-            content.glassEffect(.regular, in: Capsule())
+        if interactive {
+            content.accessibilityAddTraits(.isButton).accessibilityAction { onLogs() }
         } else {
-            content
+            content.accessibilityRemoveTraits(.isButton)
         }
-        #else
-        content
-        #endif
     }
 }
 

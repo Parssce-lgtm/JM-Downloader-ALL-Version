@@ -17,7 +17,7 @@ final class CompatibilityUITests: XCTestCase {
             XCTAssertGreaterThanOrEqual(card.frame.minX, window.minX)
             XCTAssertLessThanOrEqual(card.frame.maxX, window.maxX)
             XCTAssertGreaterThanOrEqual(card.frame.height, 91.9)
-            let notice = title == "下载任务" ? app.buttons["logCapsule"] : app.descendants(matching: .any)["libraryLoadNotice-" + title].firstMatch
+            let notice = title == "下载任务" ? app.buttons["sharedNoticeCapsule"] : app.descendants(matching: .any)["sharedNoticeCapsule"].firstMatch
             XCTAssertTrue(notice.waitForExistence(timeout: 5))
             let leading = notice.frame.minX - window.minX
             let trailing = window.maxX - notice.frame.maxX
