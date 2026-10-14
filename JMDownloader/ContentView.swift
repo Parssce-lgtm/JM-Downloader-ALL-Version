@@ -62,9 +62,11 @@ struct ContentView: View {
             }.font(.headline).foregroundStyle(.primary).buttonStyle(.plain).accessibilityIdentifier("scrollToTop")
             Spacer(minLength: 0)
             Button { presentSettings() } label: {
-                Image(systemName: "gearshape").font(.system(size: 22))
-                    .frame(width: 44, height: 44)
-            }.modifier(HeaderActionStyle()).accessibilityLabel("设置").accessibilityIdentifier("settings")
+                Image(systemName: "gearshape").font(.system(size: 19))
+                    .frame(width: 38, height: 38)
+            }.modifier(HeaderActionStyle())
+                .frame(width: 44, height: 44)
+                .accessibilityLabel("设置").accessibilityIdentifier("settings")
         }.frame(minHeight: 48)
     }
     private func presentSettings() {
