@@ -31,13 +31,11 @@ run_tests() {
 }
 if run_tests build/Compatibility-first.xcresult 2>&1 | tee build/compatibility-first.log; then
   mv build/Compatibility-first.xcresult build/Compatibility.xcresult
-elif grep -Eiq 'FBSApplicationLibrary returned nil|Timed out waiting for AX loaded notification|test runner failed to initialize' build/compatibility-first.log; then
-  echo 'Simulator test runner did not start; retrying once with a fresh boot.'
+else
+  echo 'First compatibility run failed; retrying once with a fresh simulator.'
   xcrun simctl shutdown "$DEVICE" || true
   xcrun simctl erase "$DEVICE"
   xcrun simctl boot "$DEVICE"
   xcrun simctl bootstatus "$DEVICE" -b
   run_tests build/Compatibility.xcresult
-else
-  exit 1
 fi

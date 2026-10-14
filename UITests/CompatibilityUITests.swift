@@ -75,6 +75,8 @@ final class CompatibilityUITests: XCTestCase {
         tabs.buttons["漫画推荐"].tap()
         app.buttons["openComicSearch"].tap()
         app.textFields["comicSearchField"].typeText("AI绘图+剧情")
+        app.buttons["scrollToTop"].tap()
+        XCTAssertTrue(app.buttons["submitComicSearch"].exists)
         app.buttons["submitComicSearch"].tap()
         XCTAssertTrue(app.staticTexts["主动搜索的 AI 漫画"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts["仅含一个标签的漫画"].exists)

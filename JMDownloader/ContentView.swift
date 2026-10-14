@@ -227,14 +227,7 @@ private struct LibraryModuleView: View {
             .scrollDismissesKeyboard(.interactively)
             .accessibilityHidden(!isActive)
             .sheet(item: $previewComic) { CoverPreview(comic: $0, preferences: store.preferences) }
-            .onDisappear { dismissTransientControls() }
             .onChangeCompat(of: isActive) { _, active in if !active { dismissTransientControls() } }
-            // Keep the submit button until keyboard dismissal completes. The
-            // window's non-canceling tap gesture can remove focus before the
-            // button receives its action; hiding on focus loss drops that tap.
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in
-                if isActive { showSearch = false; searchFocused = false }
-            }
             .onChangeCompat(of: store.platform) { _, _ in resetPage() }
             .onChangeCompat(of: store.account) { _, _ in resetPage() }
     }

@@ -7,6 +7,11 @@ on:
         type: boolean
         default: true
         required: false
+      legacy_only:
+        description: Rerun iOS 16 when the iOS 26 binary is already verified
+        type: boolean
+        default: false
+        required: false
       ui_scope:
         description: Full interface checks or focused appearance checks
         type: choice
@@ -20,6 +25,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
+    if: ${{ !inputs.legacy_only }}
     name: iOS 26 full tests and unified IPA
     runs-on: macos-26
     timeout-minutes: 40
@@ -48,7 +54,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
   legacy:
-    if: ${{ inputs.compatibility }}
+    if: ${{ inputs.compatibility || inputs.legacy_only }}
     name: iOS 16 traditional interface representative
     runs-on: macos-14
     timeout-minutes: 30
@@ -59,8 +65,8 @@ jobs:
         run: |
           sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
           xcodebuild -downloadPlatform iOS -buildVersion 16.4
-      - name: Select legacy-compatible toolchain
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+      - name: Use matching Xcode 16.2 toolchain
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
       - name: Unit and interface representative tests
         env:
           JM_TEST_OS: '16'
