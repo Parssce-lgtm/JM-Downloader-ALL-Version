@@ -371,7 +371,7 @@ private struct LibraryModuleView: View {
                 .frame(maxWidth: .infinity).padding(.horizontal, 52)
             HStack { Image(systemName: "text.bubble").font(.title3); Spacer() }.padding(.horizontal, 22)
         }.foregroundStyle(.primary).padding(.vertical, 14)
-            .frame(maxWidth: .infinity, minHeight: 66).modifier(NoticeCapsuleStyle(transparent: true))
+            .frame(maxWidth: .infinity, minHeight: 66).modifier(NoticeCapsuleStyle())
             .accessibilityElement(children: .combine).accessibilityIdentifier("libraryLoadNotice-" + tab.rawValue)
     }
     private func comicRow(_ comic: Comic) -> some View {
@@ -718,12 +718,12 @@ private struct ComicCardStyle: ViewModifier {
 
 private struct NoticeCapsuleStyle: ViewModifier {
     var interactive = false
-    var transparent = false
     func body(content: Content) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
-            content.glassEffect(transparent ? .clear : .regular.interactive(interactive),
-                in: ConcentricRectangle(uniformTopCorners: .fixed(33), uniformBottomCorners: .concentric(minimum: 16)))
+            // Keep the same outline in a footer and a scrolling-list overlay.
+            // Regular glass softens artwork behind the notice instead of magnifying it.
+            content.glassEffect(.regular.interactive(interactive), in: Capsule())
                 .contentShape(.accessibility, Rectangle())
         } else {
             traditional(content)
@@ -733,7 +733,7 @@ private struct NoticeCapsuleStyle: ViewModifier {
         #endif
     }
     private func traditional(_ content: Content) -> some View {
-        content.background(Color(uiColor: .secondarySystemGroupedBackground).opacity(transparent ? 0.85 : 1), in: Capsule())
+        content.background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.85), in: Capsule())
             .overlay { Capsule().strokeBorder(Color.primary.opacity(0.16), lineWidth: 1).allowsHitTesting(false) }
     }
 }

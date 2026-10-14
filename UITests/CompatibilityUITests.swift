@@ -3,7 +3,7 @@ import XCTest
 final class CompatibilityUITests: XCTestCase {
     @MainActor func testUnifiedNavigationCardsAndActions() {
         let app = XCUIApplication()
-        app.launchArguments = ["--ui-fixture-v120", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launchArguments = ["--ui-fixture-v120", "--long-library-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
         let tabs = app.segmentedControls["libraryTabs"]
         XCTAssertTrue(tabs.waitForExistence(timeout: 15))

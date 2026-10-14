@@ -211,11 +211,13 @@ final class JMDownloaderUITests: XCTestCase {
         pager.swipeLeft()
         XCTAssertTrue(app.scrollViews["libraryScroll-漫画推荐"].waitForExistence(timeout: 5))
         XCTAssertTrue(tabs.buttons["漫画推荐"].isSelected)
+        attach(app, name: "38-light-recommendation-notice-over-cards")
         pager.swipeRight()
         XCTAssertTrue(app.scrollViews["libraryScroll-漫画收藏"].waitForExistence(timeout: 5))
         pager.swipeRight()
         XCTAssertTrue(app.buttons["startAll"].waitForExistence(timeout: 5))
         XCTAssertTrue(tabs.buttons["下载任务"].isSelected)
+        attach(app, name: "39-light-download-notice-capsule")
         app.terminate()
         app.launchArguments += ["--dark-fixture"]
         app.launch()
@@ -223,6 +225,11 @@ final class JMDownloaderUITests: XCTestCase {
         tabs.buttons["下载任务"].tap()
         XCTAssertTrue(app.buttons["logCapsule"].waitForExistence(timeout: 5))
         attach(app, name: "30-dark-liquid-glass-rounded-cards")
+        for module in ["漫画收藏", "漫画推荐"] {
+            tabs.buttons[module].tap()
+            XCTAssertTrue(app.descendants(matching: .any)["libraryLoadNotice-" + module].firstMatch.waitForExistence(timeout: 5))
+            attach(app, name: "40-dark-notice-over-cards-" + module)
+        }
     }
 
     @MainActor func testFavoritesUseLoadingIconAndReadOnlyProgressNotice() {
