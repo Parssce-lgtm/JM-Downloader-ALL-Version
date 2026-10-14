@@ -1,0 +1,54 @@
+name: Recover one iOS 26 check and build IPA
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Frozen source commit to verify and build
+        required: true
+        type: string
+      test_identifier:
+        description: Single XCTest identifier to recheck
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  recover:
+    name: iOS 26 targeted recheck and unified IPA
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+      - name: Select Xcode 26
+        run: |
+          XCODE=$(find /Applications -maxdepth 1 -name 'Xcode_26*.app' | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+          git rev-parse HEAD
+      - name: Recheck the selected test
+        env:
+          JM_RECHECK_TEST: ${{ inputs.test_identifier }}
+        run: |
+          set -euo pipefail
+          [[ "$JM_RECHECK_TEST" == JMDownloaderUITests/*/* ]]
+          mkdir -p build
+          trap 'xcrun xcresulttool export attachments --path build/Recheck.xcresult --output-path build/screenshots || true' EXIT
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); names=[x for k,v in d["devices"].items() if "iOS-26" in k for x in v if x["name"]=="iPhone 17 Pro Max"]; assert names; print(names[0]["udid"])')
+          xcodebuild test -project JMDownloader.xcodeproj -scheme JMDownloader \
+            -destination "platform=iOS Simulator,id=$DEVICE" -parallel-testing-enabled NO \
+            -only-testing:"$JM_RECHECK_TEST" -derivedDataPath build/DerivedData \
+            -resultBundlePath build/Recheck.xcresult CODE_SIGNING_ALLOWED=NO
+      - name: Build single unsigned device IPA
+        run: bash scripts/build-unsigned-ipa.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: JM-downloader-recheck-build
+          path: |
+            build/JM-downloader-unsigned.ipa
+            build/Recheck.xcresult
+            build/screenshots
+          if-no-files-found: warn
+          retention-days: 14
