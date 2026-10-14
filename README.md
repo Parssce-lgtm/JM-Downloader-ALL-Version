@@ -1,4 +1,4 @@
-# JM downloader 1.7.0 / Build 24
+# JM downloader 1.7.0 / Build 25
 
 原生 SwiftUI / UIKit 漫画下载应用，支持 JMComic 与 PicACG，最低系统版本为 iOS 16.0。一个 App 根据系统选择外观：iOS 16–18 使用统一传统 SwiftUI 界面，iOS 26–27 使用系统液态玻璃；按钮、卡片、导航和三页切换共用同一套结构。布局按可用宽度和安全区域自适应 5.8、6.1、6.3、6.5、6.7 英寸机型，不按机型硬编码。
 
@@ -21,7 +21,7 @@ GitHub Actions 手动执行 Build iOS，默认仅测试 iOS 16.4（代表 16–1
 
 最新发布：[1.7.0 / Build 24 统一版](https://github.com/Parssce-lgtm/JM-downloader-iOS/releases/tag/v1.7.0-build24)，只提供一个适用于所有支持系统的未签名 IPA。
 
-本次代表系统验证：[完整检查](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38490295388)中，iOS 16.4 通过 97 项单元测试和 3 项界面测试；iOS 26 通过 97 项单元测试，19 项界面检查已分别通过（初次 18 项通过，1 项 XCTest 文本框查询超时，随后与两项卡片检查一起[单独复核通过并构建 IPA](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38493802463))。最后的玻璃背景调整不改变 iOS 16 编译分支，沿用已通过结果。16.4 代表 16–18，26 代表 26–27；真机及真实账号未单独实测。
+上一版代表系统验证：[完整检查](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38490295388)中，iOS 16.4 通过 97 项单元测试和 3 项界面测试；iOS 26 通过 97 项单元测试，19 项界面检查已分别通过（初次 18 项通过，1 项 XCTest 文本框查询超时，随后与两项卡片检查一起[单独复核通过并构建 IPA](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38493802463))。最后的玻璃背景调整不改变 iOS 16 编译分支，沿用已通过结果。16.4 代表 16–18，26 代表 26–27；真机及真实账号未单独实测。
 
 ## 使用
 
@@ -47,6 +47,12 @@ GitHub Actions 手动执行 Build iOS，默认仅测试 iOS 16.4（代表 16–1
 - 搜索中刷新会重新执行当前查询；收藏和推荐各自保存查询与结果，只有点击“返回推荐/收藏”才退出搜索。相同查询刷新时保留已有结果，分页失败后重试当前页。
 
 ## 更新记录
+
+### 1.7.0 / Build 25
+
+- 以 Build 23 为基础恢复 iOS 26 液态玻璃：收藏、推荐保留透明玻璃，下载任务保留交互玻璃，移除 Build 24 的半透明衬底。
+- 底部只修正卡片圆角，统一使用胶囊形状；保持左右与底部等距留白。
+- 顶部切换栏与跟手滑块使用 iOS 26 系统玻璃材质，保留拖动跟随和原有页面操作。iOS 16–18 继续使用传统界面。
 
 ### 1.7.0 / Build 24
 

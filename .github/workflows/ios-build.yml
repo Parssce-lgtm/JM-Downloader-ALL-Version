@@ -7,6 +7,12 @@ on:
         type: boolean
         default: true
         required: false
+      ui_scope:
+        description: Full interface checks or focused appearance checks
+        type: choice
+        options: [full, appearance]
+        default: full
+        required: false
 permissions:
   contents: read
 concurrency:
@@ -26,6 +32,8 @@ jobs:
           xcodebuild -version
           xcrun simctl list devices available
       - name: Full unit and UI tests
+        env:
+          JM_UI_SCOPE: ${{ inputs.ui_scope }}
         run: bash scripts/test-ios.sh
       - name: Build single unsigned device IPA
         run: bash scripts/build-unsigned-ipa.sh

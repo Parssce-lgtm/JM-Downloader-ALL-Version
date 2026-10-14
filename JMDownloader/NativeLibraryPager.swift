@@ -43,6 +43,7 @@ struct NativeLibraryTabs: UIViewRepresentable {
 // behavior. Its public background-image API lets our indicator move freely.
 final class TrackingLibraryTabs: UISegmentedControl {
     private let indicator = CALayer()
+    private var glassIndicator: UIVisualEffectView?
     private var subscription: AnyCancellable?
     private var position: CGFloat = 1
     var indicatorFrame: CGRect { indicator.frame }
@@ -63,6 +64,20 @@ final class TrackingLibraryTabs: UISegmentedControl {
             setDividerImage(clear, forLeftSegmentState: left, rightSegmentState: right, barMetrics: .default)
         } }
         layer.insertSublayer(indicator, at: 0)
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
+            let effect = UIGlassEffect(style: .regular)
+            effect.isInteractive = true
+            let glass = UIVisualEffectView(effect: effect)
+            glass.isUserInteractionEnabled = false
+            glass.isAccessibilityElement = false
+            glass.clipsToBounds = true
+            glass.cornerConfiguration = .capsule()
+            insertSubview(glass, at: 0)
+            glassIndicator = glass
+            indicator.isHidden = true
+        }
+        #endif
         layer.masksToBounds = true
         subscription = paging.positions.sink { [weak self] value in
             self?.position = value
@@ -84,7 +99,7 @@ final class TrackingLibraryTabs: UISegmentedControl {
         return true
     }
     private func updateAppearance() {
-        backgroundColor = .tertiarySystemFill
+        backgroundColor = traditional ? .tertiarySystemFill : .clear
         let size = UIFont.preferredFont(forTextStyle: .subheadline).pointSize
         setTitleTextAttributes([.foregroundColor: UIColor.label, .font: UIFont.systemFont(ofSize: size, weight: .medium)], for: .normal)
         setTitleTextAttributes([.foregroundColor: UIColor.label, .font: UIFont.systemFont(ofSize: size, weight: .semibold)], for: .selected)
@@ -102,6 +117,7 @@ final class TrackingLibraryTabs: UISegmentedControl {
         indicator.backgroundColor = (traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.36, alpha: 1) : UIColor.white).cgColor
         indicator.shadowColor = UIColor.black.cgColor; indicator.shadowOpacity = traditional ? 0.12 : 0
         indicator.shadowRadius = 2; indicator.shadowOffset = CGSize(width: 0, height: 1)
+        glassIndicator?.frame = indicator.frame
         CATransaction.commit()
     }
 }
