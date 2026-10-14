@@ -167,8 +167,11 @@ struct NativeLibraryPager: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: LibraryPagerController, context: Context) { configure(controller) }
     private func configure(_ controller: LibraryPagerController) {
         controller.onPosition = { paging.report($0) }
-        paging.onTopDrag = { [weak controller] in controller?.setInteractivePosition($0) }
-        paging.onTopDragEnd = { [weak controller] in controller?.finishInteractivePosition($0, animated: animated) }
+        let shouldAnimate = animated
+        Task { @MainActor in
+            paging.onTopDrag = { [weak controller] in controller?.setInteractivePosition($0) }
+            paging.onTopDragEnd = { [weak controller] in controller?.finishInteractivePosition($0, animated: shouldAnimate) }
+        }
         controller.onSelection = { index in
             let next = LibraryTab.allCases[index]
             if selection != next { selection = next }
