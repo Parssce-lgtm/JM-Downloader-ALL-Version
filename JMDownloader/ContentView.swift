@@ -61,24 +61,12 @@ struct ContentView: View {
                 pageStates[tab]?.scrollToTopRequest += 1
             }.font(.headline).foregroundStyle(.primary).buttonStyle(.plain).accessibilityIdentifier("scrollToTop")
             Spacer(minLength: 0)
-            Button { presentSettings() } label: {
+            Button { settings = true } label: {
                 Image(systemName: "gearshape").font(.system(size: 18))
-                    .frame(width: 26, height: 26)
+                    .frame(width: 44, height: 44)
             }.modifier(HeaderActionStyle())
-                .frame(width: 44, height: 44)
                 .accessibilityLabel("设置").accessibilityIdentifier("settings")
         }.frame(minHeight: 48)
-    }
-    private func presentSettings() {
-        #if compiler(>=6.2)
-        if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
-            // Let the system glass button complete its release response before
-            // presenting the sheet, which otherwise removes the pressed view.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) { settings = true }
-            return
-        }
-        #endif
-        settings = true
     }
 }
 
@@ -675,7 +663,7 @@ private struct HeaderActionStyle: ViewModifier {
     func body(content: Content) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
-            content.buttonStyle(.glass).buttonBorderShape(.circle)
+            content.buttonStyle(.plain).glassEffect(.regular.interactive(), in: Circle())
         } else { traditional(content) }
         #else
         traditional(content)

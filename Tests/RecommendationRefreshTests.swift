@@ -17,18 +17,25 @@ private final class TagCatalogProtocol: URLProtocol {
                     "204": ["純愛", "彩漫"], "205": ["純愛", "彩漫扩展"]][id] ?? ["剧情"]
         var rows = [["id": "200", "name": "剧情标题但没有该标签"], ["id": "201", "name": "真正含标签"], ["id": "202", "name": "仅含相似标签"]]
         let searchQuery = query.first { $0.name == "search_query" }?.value ?? ""
-        if searchQuery.contains("+") && (searchQuery.contains("纯爱") || searchQuery.contains("純愛")) {
-            // A broad first-tag page has no matching comic. The combined
-            // traditional query finds one on the server, plus a partial tag.
-            rows = searchQuery.contains("純愛")
-                ? [["id": "204", "name": "正确的双标签漫画"], ["id": "205", "name": "相似标签漫画"]] : []
+        if searchQuery == "纯爱" || searchQuery == "純愛" {
+            // The broad first-tag page misses the intersection.
+            rows = [["id": "200", "name": "无关漫画"], ["id": "203", "name": "已下架漫画"]]
+        } else if searchQuery == "彩漫" {
+            rows = [["id": "204", "name": "正确的双标签漫画"], ["id": "205", "name": "相似标签漫画"]]
+        } else if searchQuery == "校园" {
+            rows = [["id": "201", "name": "真正含标签"], ["id": "202", "name": "仅含相似标签"]]
         }
         if query.first(where: { $0.name == "main_tag" })?.value == "0" {
             rows.append(["id": "203", "name": "服务器混入的无关漫画"])
         }
-        let data: [String: Any] = url.path == "/search"
-            ? ["content": rows]
-            : ["id": id, "name": "fixture", "tags": tags]
+        let data: Any
+        if url.path == "/search" {
+            data = ["content": rows, "total": searchQuery == "纯爱" || searchQuery == "純愛" ? 100 : rows.count]
+        } else if id == "200" || id == "203" {
+            data = [Any]()
+        } else {
+            data = ["id": id, "name": "fixture", "tags": tags]
+        }
         let payload = try! JSONSerialization.data(withJSONObject: ["code": 200, "data": data])
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: payload); client?.urlProtocolDidFinishLoading(self)
@@ -129,7 +136,7 @@ final class RecommendationRefreshTests: XCTestCase {
         let result = try await ComicSearchQuery("剧情+校园").results(using: api, page: 1)
         XCTAssertEqual(result.map(\.id), ["201"])
     }
-    func testJMMultipleTagsSearchAllTermsAndTraditionalVariant() async throws {
+    func testJMMultipleTagsUseRarestTagAndVerifyEveryTag() async throws {
         TagCatalogProtocol.reset()
         var preferences = Preferences(); preferences.domains = "tags.invalid"
         let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [TagCatalogProtocol.self]
@@ -141,9 +148,9 @@ final class RecommendationRefreshTests: XCTestCase {
         let queries = TagCatalogProtocol.recorded().filter { $0.url?.path == "/search" }.map {
             URLComponents(url: $0.url!, resolvingAgainstBaseURL: false)!.queryItems!.first { $0.name == "search_query" }!.value!
         }
-        XCTAssertTrue(queries.contains("+纯爱 +彩漫"))
-        XCTAssertTrue(queries.contains("+純愛 +彩漫"))
-        XCTAssertFalse(queries.contains("纯爱"), "Never page through only the first broad tag")
+        XCTAssertTrue(queries.contains("纯爱"))
+        XCTAssertTrue(queries.contains("彩漫"))
+        XCTAssertFalse(queries.contains(where: { $0.contains("+") }), "The mobile API treats plus as a literal character")
     }
     func testLargeRecommendationFeedIsCompleteButPublishedInBatches() async throws {
         let probe = RankingBatchProbe()

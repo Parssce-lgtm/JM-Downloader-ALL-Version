@@ -46,6 +46,7 @@ struct NativeLibraryTabs: UIViewRepresentable {
 final class TrackingLibraryTabs: UISegmentedControl {
     private let indicator = CALayer()
     private var glassIndicator: UIVisualEffectView?
+    private var glassLabels: [UILabel] = []
     private var subscription: AnyCancellable?
     private let paging: LibraryPagingPosition
     private var position: CGFloat = 1
@@ -77,12 +78,22 @@ final class TrackingLibraryTabs: UISegmentedControl {
             glass.isAccessibilityElement = false
             glass.clipsToBounds = true
             glass.cornerConfiguration = .capsule()
-            insertSubview(glass, at: 0)
+            // UISegmentedControl draws private segment backgrounds above index 0.
+            // Keep the glass above those backgrounds and put our text above it.
+            addSubview(glass)
             glassIndicator = glass
             indicator.isHidden = true
+            for tab in LibraryTab.allCases {
+                let label = UILabel()
+                label.text = tab.rawValue
+                label.textAlignment = .center
+                label.isUserInteractionEnabled = false
+                addSubview(label)
+                glassLabels.append(label)
+            }
         }
         #endif
-        layer.masksToBounds = true
+        layer.masksToBounds = glassIndicator == nil
         let longPress = UILongPressGestureRecognizer(target: self, action: #selector(trackLongPress(_:)))
         longPress.minimumPressDuration = 0.18
         longPress.allowableMovement = 18
@@ -99,7 +110,14 @@ final class TrackingLibraryTabs: UISegmentedControl {
         CGSize(width: super.intrinsicContentSize.width,
                height: max(34, UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 12))
     }
-    override func layoutSubviews() { super.layoutSubviews(); drawIndicator() }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if let glassIndicator {
+            bringSubviewToFront(glassIndicator)
+            for label in glassLabels { bringSubviewToFront(label) }
+        }
+        drawIndicator()
+    }
     override func traitCollectionDidChange(_ previous: UITraitCollection?) {
         super.traitCollectionDidChange(previous); updateAppearance()
     }
@@ -110,8 +128,18 @@ final class TrackingLibraryTabs: UISegmentedControl {
     private func updateAppearance() {
         backgroundColor = traditional ? .tertiarySystemFill : .clear
         let size = UIFont.preferredFont(forTextStyle: .subheadline).pointSize
-        setTitleTextAttributes([.foregroundColor: UIColor.label, .font: UIFont.systemFont(ofSize: size, weight: .medium)], for: .normal)
-        setTitleTextAttributes([.foregroundColor: UIColor.label, .font: UIFont.systemFont(ofSize: size, weight: .semibold)], for: .selected)
+        let nativeTextColor: UIColor = traditional ? .label : .clear
+        setTitleTextAttributes([.foregroundColor: nativeTextColor, .font: UIFont.systemFont(ofSize: size, weight: .medium)], for: .normal)
+        setTitleTextAttributes([.foregroundColor: nativeTextColor, .font: UIFont.systemFont(ofSize: size, weight: .semibold)], for: .selected)
+        for (index, label) in glassLabels.enumerated() {
+            label.textColor = .label
+            label.font = UIFont.systemFont(ofSize: size, weight: index == selectedSegmentIndex ? .semibold : .medium)
+        }
+        let dark = traitCollection.userInterfaceStyle == .dark
+        layer.borderWidth = traditional ? 0 : 0.8
+        layer.borderColor = dark ? UIColor.white.withAlphaComponent(0.22).cgColor : UIColor.black.withAlphaComponent(0.08).cgColor
+        glassIndicator?.layer.borderWidth = dark ? 0.8 : 0.5
+        glassIndicator?.layer.borderColor = dark ? UIColor.white.withAlphaComponent(0.23).cgColor : UIColor.white.withAlphaComponent(0.65).cgColor
         drawIndicator()
     }
     private func drawIndicator() {
@@ -127,6 +155,11 @@ final class TrackingLibraryTabs: UISegmentedControl {
         indicator.shadowColor = UIColor.black.cgColor; indicator.shadowOpacity = traditional ? 0.12 : 0
         indicator.shadowRadius = 2; indicator.shadowOffset = CGSize(width: 0, height: 1)
         glassIndicator?.frame = indicator.frame
+        for (index, label) in glassLabels.enumerated() {
+            label.frame = CGRect(x: inset + CGFloat(index) * segment, y: inset, width: segment, height: height)
+            label.font = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .subheadline).pointSize,
+                                           weight: index == Int(position.rounded()) ? .semibold : .medium)
+        }
         CATransaction.commit()
     }
     private func touchPosition(_ point: CGPoint) -> CGFloat {
