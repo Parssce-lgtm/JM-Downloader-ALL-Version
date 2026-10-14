@@ -29,13 +29,14 @@ struct ContentView: View {
                         .id(item).tint(store.preferences.accent).environment(\.appLayout, layout))
                 })
             }.frame(maxWidth: layout.contentWidth).frame(maxWidth: .infinity)
-                .ignoresSafeArea(.container, edges: .bottom).background(Color(uiColor: .systemGroupedBackground))
+                .background(Color(uiColor: .systemGroupedBackground))
                 .overlay(alignment: .bottom) {
                     SharedLibraryNotice(store: store, favorites: pageStates[.favorites]!, recommendations: pageStates[.recommendations]!, tab: tab, paging: paging, onLogs: { logHistory = true })
                         .padding(.horizontal, layout.noticeInset(bottomSafeArea: bottomInset))
                         .frame(maxWidth: layout.contentWidth)
                         .padding(.bottom, layout.noticeInset(bottomSafeArea: bottomInset))
                 }
+                .ignoresSafeArea(.container, edges: .bottom)
             }
             .navigationTitle("JM downloader").navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
