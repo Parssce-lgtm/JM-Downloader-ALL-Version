@@ -62,11 +62,22 @@ struct ContentView: View {
                 pageStates[tab]?.scrollToTopRequest += 1
             }.font(.headline).foregroundStyle(.primary).buttonStyle(.plain).accessibilityIdentifier("scrollToTop")
             Spacer(minLength: 0)
-            Button { settings = true } label: {
+            Button { presentSettings() } label: {
                 Image(systemName: "gearshape").font(.system(size: 22))
-                    .frame(width: 44, height: 44).modifier(HeaderActionStyle())
-            }.buttonStyle(.plain).accessibilityLabel("设置").accessibilityIdentifier("settings")
+                    .frame(width: 44, height: 44)
+            }.modifier(HeaderActionStyle()).accessibilityLabel("设置").accessibilityIdentifier("settings")
         }.frame(minHeight: 48)
+    }
+    private func presentSettings() {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
+            // Let the system glass button complete its release response before
+            // presenting the sheet, which otherwise removes the pressed view.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) { settings = true }
+            return
+        }
+        #endif
+        settings = true
     }
 }
 
@@ -670,14 +681,15 @@ private struct HeaderActionStyle: ViewModifier {
     func body(content: Content) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
-            content.glassEffect(.regular.interactive(), in: Circle())
+            content.buttonStyle(.glass).buttonBorderShape(.circle)
         } else { traditional(content) }
         #else
         traditional(content)
         #endif
     }
     private func traditional(_ content: Content) -> some View {
-        content.background(Color(uiColor: .secondarySystemGroupedBackground), in: Circle())
+        content.buttonStyle(.plain)
+            .background(Color(uiColor: .secondarySystemGroupedBackground), in: Circle())
             .overlay { Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.7).allowsHitTesting(false) }
     }
 }
@@ -693,7 +705,7 @@ private struct ComicCardStyle: ViewModifier {
 }
 
 // The shell belongs to the root, not to any cached paging host. Only its
-// message viewport follows the finger; each page keeps its own source of text.
+// message opacity follows the finger; each page keeps its own source of text.
 @MainActor private struct SharedLibraryNotice: View {
     @ObservedObject var store: AppStore
     @ObservedObject var favorites: LibraryPageState
@@ -704,16 +716,13 @@ private struct ComicCardStyle: ViewModifier {
     @State private var position: CGFloat = 1
     var body: some View {
         ZStack {
-            GeometryReader { geometry in
-                HStack(spacing: 0) {
-                    ForEach(LibraryTab.allCases, id: \.self) { page in
-                        Text(message(for: page)).font(.caption).monospacedDigit()
-                            .multilineTextAlignment(.center).lineLimit(2)
-                            .padding(.horizontal, 52)
-                            .frame(width: geometry.size.width, height: 66)
-                    }
-                }.offset(x: -position * geometry.size.width)
-            }.clipped()
+            ForEach(Array(LibraryTab.allCases.enumerated()), id: \.element) { index, page in
+                Text(message(for: page)).font(.caption).monospacedDigit()
+                    .multilineTextAlignment(.center).lineLimit(2)
+                    .padding(.horizontal, 52)
+                    .frame(maxWidth: .infinity)
+                    .opacity(max(0, 1 - abs(position - CGFloat(index)) * 2))
+            }
             HStack {
                 Image(systemName: "text.bubble").font(.title3)
                 Spacer()
@@ -726,7 +735,7 @@ private struct ComicCardStyle: ViewModifier {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(message(for: tab))
             .modifier(NoticeAccessibility(interactive: tab == .downloads, onLogs: onLogs))
-            .modifier(NoticeCapsuleStyle(interactive: tab == .downloads, transparent: tab != .downloads))
+            .modifier(NoticeCapsuleStyle(interactive: tab == .downloads))
             .accessibilityIdentifier("sharedNoticeCapsule")
             .onReceive(paging.positions) { position = $0 }
     }
@@ -757,12 +766,10 @@ private struct NoticeAccessibility: ViewModifier {
 
 private struct NoticeCapsuleStyle: ViewModifier {
     var interactive = false
-    var transparent = false
     func body(content: Content) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
-            content.glassEffect(transparent ? .clear : .regular.interactive(interactive),
-                in: Capsule())
+            content.glassEffect(.clear.interactive(interactive), in: Capsule())
                 .contentShape(.accessibility, Rectangle())
         } else {
             traditional(content)
@@ -772,7 +779,7 @@ private struct NoticeCapsuleStyle: ViewModifier {
         #endif
     }
     private func traditional(_ content: Content) -> some View {
-        content.background(Color(uiColor: .secondarySystemGroupedBackground).opacity(transparent ? 0.85 : 1), in: Capsule())
+        content.background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.85), in: Capsule())
             .overlay { Capsule().strokeBorder(Color.primary.opacity(0.16), lineWidth: 1).allowsHitTesting(false) }
     }
 }
