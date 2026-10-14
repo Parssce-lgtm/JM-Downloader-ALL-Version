@@ -118,6 +118,11 @@ final class TrackingLibraryTabs: UISegmentedControl {
     override func layoutSubviews() {
         super.layoutSubviews()
         if let glassIndicator {
+            // UIKit keeps its own selected-segment outline even with clear images.
+            // Hide only its rendering layers; leave the segment views hit-testable.
+            for nativeSubview in subviews where nativeSubview !== glassIndicator && !glassLabels.contains(where: { $0 === nativeSubview }) {
+                nativeSubview.layer.opacity = 0
+            }
             bringSubviewToFront(glassIndicator)
             for label in glassLabels { bringSubviewToFront(label) }
         }
