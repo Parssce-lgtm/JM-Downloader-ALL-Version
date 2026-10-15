@@ -40,7 +40,12 @@ struct NativeLibraryTabs: UIViewRepresentable {
 final class TrackingLibraryTabs: UISegmentedControl {
     private let paging: LibraryPagingPosition
     private var subscription: AnyCancellable?
-    private var transition: UIViewPropertyAnimator?
+    private struct NativeMotion {
+        let layer: CALayer
+        let endpoint: CGPoint
+        let distance: CGFloat
+    }
+    private var motions: [NativeMotion] = []
     private var transitionStart: Int?
     private var touchStart = 1
     private var position: CGFloat = 1
@@ -59,12 +64,15 @@ final class TrackingLibraryTabs: UISegmentedControl {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
     func synchronizeSelection(_ index: Int) {
-        guard !handlingTouch, transition == nil, selectedSegmentIndex != index else { return }
+        guard !handlingTouch, transitionStart == nil, selectedSegmentIndex != index else { return }
         selectedSegmentIndex = index
     }
     private func settle(at index: Int) {
-        transition?.stopAnimation(true)
-        transition = nil
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for motion in motions { motion.layer.position = motion.endpoint }
+        CATransaction.commit()
+        motions.removeAll()
         transitionStart = nil
         UIView.performWithoutAnimation {
             self.selectedSegmentIndex = index
@@ -83,19 +91,36 @@ final class TrackingLibraryTabs: UISegmentedControl {
         }
         if transitionStart != lower {
             settle(at: lower)
-            let animator = UIViewPropertyAnimator(duration: 0.3, curve: .linear) { [weak self] in
-                guard let self else { return }
+            // UIKit does not expose a fractional selected index. Move only the
+            // existing native selection layers whose geometry changes between
+            // adjacent indices, preserving their system glass and touch effects.
+            func descendants(_ root: CALayer) -> [CALayer] {
+                (root.sublayers ?? []).flatMap { [$0] + descendants($0) }
+            }
+            let layers = descendants(layer)
+            let starts = Dictionary(uniqueKeysWithValues: layers.map { (ObjectIdentifier($0), $0.position) })
+            UIView.performWithoutAnimation {
                 self.selectedSegmentIndex = lower + 1
                 self.setNeedsLayout()
                 self.layoutIfNeeded()
             }
-            animator.scrubsLinearly = true
+            let segmentWidth = bounds.width / CGFloat(numberOfSegments)
+            motions = descendants(layer).compactMap { native in
+                guard let start = starts[ObjectIdentifier(native)] else { return nil }
+                let distance = native.position.x - start.x
+                guard abs(distance) > segmentWidth * 0.5,
+                      abs(distance) < segmentWidth * 1.5,
+                      abs(native.position.y - start.y) < bounds.height * 0.2 else { return nil }
+                return NativeMotion(layer: native, endpoint: native.position, distance: distance)
+            }
             transitionStart = lower
-            transition = animator
-            animator.startAnimation()
-            animator.pauseAnimation()
         }
-        transition?.fractionComplete = fraction
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for motion in motions {
+            motion.layer.position = CGPoint(x: motion.endpoint.x - motion.distance * (1 - fraction), y: motion.endpoint.y)
+        }
+        CATransaction.commit()
     }
     private func fingerPosition(_ touch: UITouch) -> CGFloat {
         let width = max(1, bounds.width) / CGFloat(numberOfSegments)

@@ -20,13 +20,27 @@ final class CompatibilityTests: XCTestCase {
         window.makeKeyAndVisible()
         defer { window.isHidden = true; previous?.makeKey() }
         window.layoutIfNeeded()
-        func capture(_ name: String) -> Data {
+        func capture(_ name: String) -> CGFloat {
             let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
                 window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
             }
             let attachment = XCTAttachment(image: image)
             attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
-            return image.pngData()!
+            let cg = image.cgImage!
+            let width = cg.width, height = cg.height
+            var pixels = [UInt8](repeating: 0, count: width * height * 4)
+            let context = CGContext(data: &pixels, width: width, height: height, bitsPerComponent: 8,
+                bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+            context.draw(cg, in: CGRect(x: 0, y: 0, width: width, height: height))
+            let scale = image.scale
+            let row = Int((control.frame.minY + 7) * scale)
+            let white = (Int(control.frame.minX * scale)..<Int(control.frame.maxX * scale)).filter { x in
+                let offset = (row * width + x) * 4
+                return pixels[offset] > 247 && pixels[offset + 1] > 247 && pixels[offset + 2] > 247
+            }
+            XCTAssertGreaterThan(white.count, 30, "Native selected capsule must be visible")
+            return CGFloat(white.reduce(0, +)) / CGFloat(max(1, white.count)) / scale
         }
         paging.report(1.2)
         try await Task.sleep(for: .milliseconds(400))
@@ -34,7 +48,7 @@ final class CompatibilityTests: XCTestCase {
         paging.report(1.8)
         try await Task.sleep(for: .milliseconds(100))
         let late = capture("native-tabs-page-80-percent")
-        XCTAssertNotEqual(early, late, "The native selection must visibly follow intermediate page positions")
+        XCTAssertGreaterThan(late - early, 50, "The native selection must visibly move between the two fractional positions")
         paging.report(2)
         XCTAssertEqual(control.selectedSegmentIndex, 2)
     }
