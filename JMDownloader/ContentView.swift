@@ -63,7 +63,7 @@ struct ContentView: View {
             .alert("提示", isPresented: Binding(get: { store.alert != nil && !settings }, set: { if !$0 && !settings { store.alert = nil } })) {
                 Button("好") { store.alert = nil }
             } message: { Text(store.alert ?? "") }
-        }.scrollDismissesKeyboard(.interactively).background(KeyboardDismissInstaller())
+        }.scrollDismissesKeyboard(.interactively)
             .background(WindowBottomInsetReader(inset: $bottomInset))
     }
     private func resetPages() {

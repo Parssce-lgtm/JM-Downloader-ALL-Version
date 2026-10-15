@@ -43,7 +43,7 @@ struct SettingsView: View {
             .alert("提示", isPresented: Binding(get: { store.alert != nil }, set: { if !$0 { store.alert = nil } })) {
                 Button("好") { store.alert = nil }
             } message: { Text(store.alert ?? "") }
-            .background(KeyboardDismissInstaller())
+            .scrollDismissesKeyboard(.interactively)
     }
 }
 
