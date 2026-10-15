@@ -52,6 +52,8 @@ bash gradlew testDebugUnitTest lintRelease assembleRelease
 
 工作流 `Build 1.8 iOS and Android` 构建两个平台，仅测试 Android：JVM 单元测试、Lint、Android 7/API 24 与 Android 12/API 31 设备检查；iOS 本轮只编译，不重复运行测试。
 
+发布验证记录：[1.8.0 构建与 Android 检查](https://github.com/Parssce-lgtm/JM-Downloader-ALL-Version/actions/runs/38808618062)。真实账号和 iOS 新增预览功能的真机操作未单独实测。
+
 ## 注意事项
 
 服务端为非官方接口，可能变更或限制线路。自动测试不代表真实账号、所有网络线路和真机后台均已验证。仅保存自己有权访问的内容。
