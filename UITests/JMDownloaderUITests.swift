@@ -201,7 +201,7 @@ final class JMDownloaderUITests: XCTestCase {
         app.launch()
         let tabs = app.segmentedControls["libraryTabs"]
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))
-        let pager = app.scrollViews["libraryPager"]
+        let pager = app.descendants(matching: .any)["libraryPager"].firstMatch
         XCTAssertTrue(pager.exists)
         let notice = app.descendants(matching: .any)["sharedNoticeCapsule"].firstMatch
         XCTAssertTrue(notice.waitForExistence(timeout: 5))

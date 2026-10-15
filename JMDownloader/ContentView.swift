@@ -11,7 +11,6 @@ struct ContentView: View {
     @State private var settings = false
     @State private var logHistory = false
     @State private var tab: LibraryTab = .favorites
-    @State private var paging = LibraryPagingPosition()
     @State private var bottomInset: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pageStates = Dictionary(uniqueKeysWithValues: LibraryTab.allCases.map { ($0, LibraryPageState()) })
@@ -20,17 +19,23 @@ struct ContentView: View {
             GeometryReader { geometry in
             let layout = AppLayout(width: geometry.size.width, height: geometry.size.height)
             VStack(spacing: 10) {
-                header.padding(.horizontal, layout.sideInset)
-                NativeLibraryTabs(selection: $tab, paging: paging)
+                Picker("浏览类型", selection: $tab) {
+                    ForEach(LibraryTab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }.pickerStyle(.segmented).accessibilityIdentifier("libraryTabs")
                     .padding(.horizontal, layout.sideInset)
-                NativeLibraryPager(selection: $tab, paging: paging, animated: !reduceMotion, pages: LibraryTab.allCases.map { item in
-                    AnyView(LibraryModuleView(store: store, pageState: pageStates[item]!, tab: item, isActive: item == tab, bottomInset: bottomInset, onSettings: { settings = true })
-                        .id(item).tint(store.preferences.accent).environment(\.appLayout, layout))
-                })
+                TabView(selection: $tab) {
+                    ForEach(LibraryTab.allCases, id: \.self) { item in
+                        LibraryModuleView(store: store, pageState: pageStates[item]!, tab: item, isActive: item == tab, bottomInset: bottomInset, onSettings: { settings = true })
+                            .tint(store.preferences.accent).environment(\.appLayout, layout)
+                            .tag(item).accessibilityHidden(item != tab)
+                    }
+                }.tabViewStyle(.page(indexDisplayMode: .never))
+                    .animation(reduceMotion ? nil : .default, value: tab)
+                    .accessibilityIdentifier("libraryPager")
             }.frame(maxWidth: layout.contentWidth).frame(maxWidth: .infinity)
                 .background(Color(uiColor: .systemGroupedBackground))
                 .overlay(alignment: .bottom) {
-                    SharedLibraryNotice(store: store, favorites: pageStates[.favorites]!, recommendations: pageStates[.recommendations]!, tab: tab, paging: paging, onLogs: { logHistory = true })
+                    SharedLibraryNotice(store: store, favorites: pageStates[.favorites]!, recommendations: pageStates[.recommendations]!, tab: tab, onLogs: { logHistory = true })
                         .padding(.horizontal, layout.noticeInset(bottomSafeArea: bottomInset))
                         .frame(maxWidth: layout.contentWidth)
                         .padding(.bottom, layout.noticeInset(bottomSafeArea: bottomInset))
@@ -38,7 +43,19 @@ struct ContentView: View {
                 .ignoresSafeArea(.container, edges: .bottom)
             }
             .navigationTitle("JM downloader").navigationBarTitleDisplayMode(.inline)
-            .toolbar(.hidden, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Button("JM downloader") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        pageStates[tab]?.scrollToTopRequest += 1
+                    }.font(.headline).foregroundStyle(.primary).buttonStyle(.plain)
+                        .accessibilityIdentifier("scrollToTop")
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { settings = true } label: { Image(systemName: "gearshape") }
+                        .accessibilityLabel("设置").accessibilityIdentifier("settings")
+                }
+            }
             .sheet(isPresented: $settings) { SettingsView(store: store) }
             .navigationDestination(isPresented: $logHistory) { LogHistoryView(store: store) }
             .onChangeCompat(of: store.account) { _, _ in resetPages() }
@@ -51,22 +68,6 @@ struct ContentView: View {
     }
     private func resetPages() {
         pageStates = Dictionary(uniqueKeysWithValues: LibraryTab.allCases.map { ($0, LibraryPageState()) })
-    }
-    private var header: some View {
-        HStack {
-            Color.clear.frame(width: 44, height: 44).accessibilityHidden(true)
-            Spacer(minLength: 0)
-            Button("JM downloader") {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                pageStates[tab]?.scrollToTopRequest += 1
-            }.font(.headline).foregroundStyle(.primary).buttonStyle(.plain).accessibilityIdentifier("scrollToTop")
-            Spacer(minLength: 0)
-            Button { settings = true } label: {
-                Image(systemName: "gearshape").font(.system(size: 18))
-                    .frame(width: 28, height: 28)
-            }.modifier(HeaderActionStyle())
-                .accessibilityLabel("设置").accessibilityIdentifier("settings")
-        }.frame(minHeight: 48)
     }
 }
 
@@ -659,24 +660,6 @@ private struct LogHistoryView: View {
     }
 }
 
-private struct HeaderActionStyle: ViewModifier {
-    func body(content: Content) -> some View {
-        #if compiler(>=6.2)
-        if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
-            content.buttonStyle(.glass).buttonBorderShape(.circle).controlSize(.regular)
-                .frame(width: 44, height: 44)
-        } else { traditional(content) }
-        #else
-        traditional(content)
-        #endif
-    }
-    private func traditional(_ content: Content) -> some View {
-        content.buttonStyle(.plain).frame(width: 44, height: 44)
-            .background(Color(uiColor: .secondarySystemGroupedBackground), in: Circle())
-            .overlay { Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.7).allowsHitTesting(false) }
-    }
-}
-
 private struct ComicCardStyle: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
     func body(content: Content) -> some View {
@@ -687,16 +670,14 @@ private struct ComicCardStyle: ViewModifier {
     }
 }
 
-// The shell belongs to the root, not to any cached paging host. Only its
-// message opacity follows the finger; each page keeps its own source of text.
+// A single SwiftUI capsule stays outside the paged TabView.
 @MainActor private struct SharedLibraryNotice: View {
     @ObservedObject var store: AppStore
     @ObservedObject var favorites: LibraryPageState
     @ObservedObject var recommendations: LibraryPageState
     let tab: LibraryTab
-    let paging: LibraryPagingPosition
     let onLogs: () -> Void
-    @State private var position: CGFloat = 1
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         ZStack {
             noticeText(.downloads, index: 0)
@@ -711,7 +692,7 @@ private struct ComicCardStyle: ViewModifier {
             .modifier(NoticeAccessibility(interactive: tab == .downloads, onLogs: onLogs))
             .modifier(NoticeCapsuleStyle(interactive: tab == .downloads, transparent: tab != .downloads))
             .accessibilityIdentifier("sharedNoticeCapsule")
-            .onReceive(paging.positions) { position = $0 }
+            .animation(reduceMotion ? nil : .default, value: tab)
     }
     private func noticeText(_ page: LibraryTab, index: Int) -> some View {
         Text(message(for: page))
@@ -723,9 +704,7 @@ private struct ComicCardStyle: ViewModifier {
             .opacity(noticeOpacity(at: index))
     }
     private func noticeOpacity(at index: Int) -> Double {
-        let distance: CGFloat = abs(position - CGFloat(index))
-        let visible: CGFloat = max(CGFloat.zero, CGFloat(1) - distance * CGFloat(2))
-        return Double(visible)
+        tab == LibraryTab.allCases[index] ? 1 : 0
     }
     private var noticeIcons: some View {
         HStack {
