@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.*
@@ -17,7 +18,7 @@ import kotlinx.coroutines.*
     var destination by rememberSaveable{mutableStateOf("")};var user by rememberSaveable{mutableStateOf("")};var password by remember{mutableStateOf("")};var busy by remember{mutableStateOf(false)};var p by remember(s.settings){mutableStateOf(s.settings)};var error by remember{mutableStateOf<String?>(null)}
     fun save(value: Settings){try{store.settings(value)}catch(e:Exception){error=e.message}}
     androidx.activity.compose.BackHandler {if(destination.isEmpty())onBack()else destination=""}
-    Scaffold(topBar={TopAppBar(title={Text(destination.ifEmpty{"设置"})},navigationIcon={IconButton(onClick={if(destination.isEmpty())onBack()else destination=""}){Icon(Icons.Outlined.ArrowBack,"返回")}})}){padding->LazyColumn(Modifier.padding(padding).fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+    Scaffold(topBar={TopAppBar(title={Text(destination.ifEmpty{"设置"})},navigationIcon={IconButton(onClick={if(destination.isEmpty())onBack()else destination=""}){Icon(Icons.Outlined.ArrowBack,"返回")}})}){padding->LazyColumn(Modifier.testTag("settingsList").padding(padding).fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         when(destination){
             ""->{
                 item{Text("切换平台",style=MaterialTheme.typography.titleMedium);SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()){Platform.entries.forEachIndexed{i,platform->SegmentedButton(selected=s.settings.platform==platform,onClick={save(s.settings.copy(platform=platform))},shape=SegmentedButtonDefaults.itemShape(i,Platform.entries.size)){Text(platform.label)}}}}

@@ -1,6 +1,11 @@
 name: Build 1.8 iOS and Android
 on:
   workflow_dispatch:
+    inputs:
+      ios:
+        description: Build the iOS IPA too (no iOS tests)
+        type: boolean
+        default: true
 permissions:
   contents: read
 jobs:
@@ -94,6 +99,7 @@ jobs:
             device-tests.txt
             screen-*.png
   ios:
+    if: ${{ inputs.ios }}
     name: iOS 1.8 unified IPA (build only)
     runs-on: macos-26
     timeout-minutes: 25

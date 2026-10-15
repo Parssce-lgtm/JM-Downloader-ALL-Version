@@ -59,6 +59,7 @@ class DownloadService: Service() {
             // Reconcile disk and checkpoint after an interrupted write before resuming.
             val done=pages.indices.filter{n->val o=BitmapFactory.Options().apply{inJustDecodeBounds=true};BitmapFactory.decodeFile(File(work,"$n.img").path,o);o.outWidth>0&&o.outHeight>0}.toSet()
             store.updateJob(id){it.copy(phase=Phase.DOWNLOADING,pages=pages,done=done,rendered=0)}
+            store.flush()
             val media=networkClient(p).newBuilder().followRedirects(true).followSslRedirects(false).callTimeout(60,java.util.concurrent.TimeUnit.SECONDS).build();val sem=Semaphore(p.concurrency.coerceIn(1,6))
             coroutineScope{pages.indices.filterNot{it in done}.map{n->launch{sem.withPermit{
                 val page=pages[n];var last: Exception=IOException("图片加载失败");var success=false
