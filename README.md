@@ -1,6 +1,6 @@
 # JM downloader 1.7.0 / Build 23
 
-原生 SwiftUI / UIKit 漫画下载应用，支持 JMComic 与 PicACG，最低系统版本为 iOS 16.0。一个 App 根据系统选择外观：iOS 16–18 使用统一传统 SwiftUI 界面，iOS 26–27 使用系统液态玻璃；按钮、卡片、导航和三页切换共用同一套结构。布局按可用宽度和安全区域自适应 5.8、6.1、6.3、6.5、6.7 英寸机型，不按机型硬编码。
+SwiftUI 漫画下载应用，支持 JMComic 与 PicACG，最低系统版本为 iOS 16.0。一个 App 根据系统选择外观：iOS 16–18 使用统一传统 SwiftUI 界面，iOS 26–27 使用系统液态玻璃；按钮、卡片、导航和三页切换共用同一套结构。布局按可用宽度和安全区域自适应 5.8、6.1、6.3、6.5、6.7 英寸机型，不按机型硬编码。
 
 - 右上角设置 → 账号设置：JMComic / PicACG 平台切换与各自登录、API 域名、HTTP CONNECT 代理、图片并发、刷新收藏、记住账号、文件目录、隐藏已完成/已删除任务。
 - 顶部模块依次为下载任务 / 漫画收藏 / 漫画推荐，支持左右滑动切换。收藏支持搜索、收藏夹筛选和隐藏漫画，已下载与已隐藏查看互斥；推荐默认最多爱心排序，支持独立搜索及 `#标签` 精确检索、`标签A+标签B` 多标签精确检索。刷新、左右滑动切页或查看封面后保留当前搜索。
@@ -19,9 +19,11 @@ bash scripts/build-unsigned-ipa.sh
 
 GitHub Actions 手动执行 Build iOS，默认仅测试 iOS 16.4（代表 16–18 传统界面）和 iOS 26（代表 26–27 液态玻璃），先测试再生成 `JM-downloader-unsigned.ipa`。未签名 IPA 需要自行签名后安装。默认不包含开发者证书、个人账号或个人漫画文件。
 
-最新发布：[1.7.0 / Build 23 原生界面修订版](https://github.com/Parssce-lgtm/JM-downloader-iOS/releases/tag/v1.7.0-build23)，只提供一个适用于所有支持系统的未签名 IPA。
+最新发布：[1.7.0 / Build 23 SwiftUI 原生控件修订版](https://github.com/Parssce-lgtm/JM-downloader-iOS/releases/tag/v1.7.0-build23)，只提供一个适用于所有支持系统的未签名 IPA。
 
-本次验证范围：iOS 16.4（代表 16–18）与 iOS 26（代表 26–27）；最终测试和构建记录随 Release 发布。真机与真实账号未单独实测。
+本次重新发布的文件为 `JM-downloader-1.7.0-build23-swiftui-unsigned.ipa`。请重新下载并导入签名工具，避免选到此前保存的旧 Build 23 文件。设置 → 关于中可查看完整 Build 编号。
+
+本次代表系统验证：[测试与 IPA 构建记录](https://github.com/Parssce-lgtm/JM-downloader-iOS/actions/runs/38736054644)：iOS 16.4 与 iOS 26 各通过 100 项单元测试；iOS 16.4 的 4 项界面检查、iOS 26 的 5 项界面检查通过。已复核SwiftUI 系统控件、浅色/深色与底部卡片截图。仅使用这两个代表系统，真机触感与真实账号未单独实测。
 
 ## 使用
 
