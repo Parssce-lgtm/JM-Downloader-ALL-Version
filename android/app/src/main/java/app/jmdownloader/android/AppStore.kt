@@ -21,9 +21,10 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-class JMApplication: Application() {
+class JMApplication: Application(), coil.ImageLoaderFactory {
     lateinit var store: AppStore
     override fun onCreate(){super.onCreate();com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(this);store=AppStore(this)}
+    override fun newImageLoader()=coil.ImageLoader.Builder(this).okHttpClient{networkClient(store.state.value.settings).newBuilder().followRedirects(true).build()}.build()
 }
 class SecureVault(context: Context) {
     private val prefs=context.getSharedPreferences("vault",Context.MODE_PRIVATE)
@@ -39,7 +40,7 @@ class AppStore(val context: Context) {
     private val mutable=MutableStateFlow(AppState())
     val state: StateFlow<AppState> = mutable.asStateFlow()
     private val apis=java.util.concurrent.ConcurrentHashMap<String,ComicApi>()
-    private val operations=mutableMapOf<Section,Job>();private val generations=mutableMapOf<Section,Long>()
+    private val operations=java.util.concurrent.ConcurrentHashMap<Section,Job>();private val generations=java.util.concurrent.ConcurrentHashMap<Section,Long>()
     private val cacheLock=Mutex();private val tags=java.util.concurrent.ConcurrentHashMap<String,Comic>()
     private val cacheFile=AtomicFile(File(context.filesDir,"tags.json"));private var cacheSave: Job?=null
     val ready=CompletableDeferred<Unit>()

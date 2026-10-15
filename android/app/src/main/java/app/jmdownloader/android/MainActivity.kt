@@ -44,10 +44,49 @@ class MainActivity: ComponentActivity() {
     LaunchedEffect(Unit){store.ready.await();if(Build.VERSION.SDK_INT>=33)notifications.launch(Manifest.permission.POST_NOTIFICATIONS)}
     if(settings){SettingsScreen(store,s){settings=false};return}
     val selected=pages.getOrElse(pager.currentPage){Section.FAVORITES};val f=s.feedback[selected]?:Feedback(if(selected==Section.DOWNLOADS)"准备就绪 · 下载文件保存在应用文件根目录"else"准备就绪")
-    Scaffold(topBar={Column{CenterAlignedTopAppBar(title={TextButton(onClick={scope.launch{listStates[selected]?.animateScrollToItem(0)}}){Text("JM downloader",color=MaterialTheme.colorScheme.onSurface,fontWeight=FontWeight.Bold)}},actions={IconButton(onClick={settings=true}){Icon(Icons.Outlined.Settings,"设置")}})
-        PrimaryScrollableTabRow(selectedTabIndex=pager.currentPage.coerceAtMost(pages.lastIndex),edgePadding=0.dp){pages.forEachIndexed{index,page->Tab(selected=pager.currentPage==index,onClick={scope.launch{pager.animateScrollToPage(index)}},text={Text(page.label,maxLines=1)})}}
-    },bottomBar={if(selected!=Section.PDF)Surface(onClick={if(selected==Section.DOWNLOADS)logs=true},modifier=Modifier.navigationBarsPadding().padding(horizontal=16.dp,vertical=8.dp).fillMaxWidth(),shape=RoundedCornerShape(32.dp),tonalElevation=3.dp){Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Outlined.ChatBubbleOutline,"提示");Text(f.message,Modifier.weight(1f).padding(horizontal=12.dp),maxLines=1,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.bodyMedium);if(f.busy)Text("${f.percent}%",style=MaterialTheme.typography.labelSmall)}}}}){padding->
-        HorizontalPager(pager,Modifier.padding(padding).fillMaxSize(),key={pages[it].name}){index->val section=pages[index];if(section==Section.PDF)PDFLibraryScreen(store,s,listStates.getValue(section))else LibraryScreen(store,s,section,listStates.getValue(section),onCover={cover=it})}
+    Scaffold(
+        topBar = {
+            Column {
+                CenterAlignedTopAppBar(
+                    title = {
+                        TextButton(onClick = { scope.launch { listStates[selected]?.animateScrollToItem(0) } }) {
+                            Text("JM downloader", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    actions = { IconButton(onClick = { settings = true }) { Icon(Icons.Outlined.Settings, "设置") } }
+                )
+                PrimaryScrollableTabRow(selectedTabIndex = pager.currentPage.coerceAtMost(pages.lastIndex), edgePadding = 0.dp) {
+                    pages.forEachIndexed { index, page ->
+                        Tab(selected = pager.currentPage == index,
+                            onClick = { scope.launch { pager.animateScrollToPage(index) } },
+                            text = { Text(page.label, maxLines = 1) })
+                    }
+                }
+            }
+        },
+        bottomBar = {
+            if (selected != Section.PDF) {
+                Surface(
+                    onClick = { if (selected == Section.DOWNLOADS) logs = true },
+                    modifier = Modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth(),
+                    shape = RoundedCornerShape(32.dp), tonalElevation = 3.dp
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.ChatBubbleOutline, "提示")
+                        Text(f.message, Modifier.weight(1f).padding(horizontal = 12.dp), maxLines = 1,
+                            overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                        if (f.busy) Text("${f.percent}%", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
+    ) { padding ->
+        HorizontalPager(pager, Modifier.padding(padding).fillMaxSize(), key = { pages[it].name }) { index ->
+            val section = pages[index]
+            if (section == Section.PDF) PDFLibraryScreen(store, s, listStates.getValue(section))
+            else LibraryScreen(store, s, section, listStates.getValue(section), active = pager.currentPage == index,
+                onCover = { cover = it })
+        }
     }
     s.alert?.let{AlertDialog(onDismissRequest={store.change{v->v.copy(alert=null)}},confirmButton={TextButton(onClick={store.change{v->v.copy(alert=null)}}){Text("确认")}},text={Text(it)})}
     if(logs)ModalBottomSheet(onDismissRequest={logs=false}){LazyColumn(Modifier.fillMaxWidth().heightIn(max=500.dp).padding(20.dp)){item{Text("提示记录",style=MaterialTheme.typography.titleLarge)};items(s.logs){Text(it,Modifier.padding(vertical=8.dp))}}}
@@ -55,10 +94,11 @@ class MainActivity: ComponentActivity() {
 }
 
 @OptIn(ExperimentalFoundationApi::class,ExperimentalMaterial3Api::class)
-@Composable fun LibraryScreen(store: AppStore,s: AppState,section: Section,listState: LazyListState,onCover: (Comic)->Unit){
+@Composable fun LibraryScreen(store: AppStore,s: AppState,section: Section,listState: LazyListState,active: Boolean,onCover: (Comic)->Unit){
     var searchOpen by rememberSaveable(section){mutableStateOf(false)};var input by rememberSaveable(section){mutableStateOf("")};var menu by remember{mutableStateOf(false)};var filter by rememberSaveable{mutableStateOf("普通")};var folder by rememberSaveable{mutableStateOf("")};var folderMenu by remember{mutableStateOf(false)}
     var confirmation by remember{mutableStateOf<Comic?>(null)};var deleting by remember{mutableStateOf<DownloadTask?>(null)}
     val search=s.searches[section];val feedback=s.feedback[section]?:Feedback();val library=s.library;val downloaded=s.jobs.filter{it.owner==s.owner&&it.phase==Phase.COMPLETED}.map{it.comic.key}.toSet();val excluded=library?.excluded?.map{it.key}.orEmpty().toSet()
+    LaunchedEffect(active,s.owner){if(active&&s.owner.isNotEmpty()&&section!=Section.DOWNLOADS&&s.feedback[section]==null&&search==null)store.refresh(section)}
     fun request(c: Comic){if(c.key in excluded)confirmation=c else store.enqueue(c,false)}
     val rows=if(search!=null)search.results else if(section==Section.FAVORITES)library?.favorites.orEmpty().filter{c->when(filter){"已下载"->c.key in downloaded;"已隐藏"->c.key in library?.hidden.orEmpty();else->c.key !in downloaded && c.key !in library?.hidden.orEmpty()}}.filter{folder.isEmpty()||folder in it.folders} else library?.recommendations.orEmpty().filter{it.key !in excluded||it.key in s.pendingDislikes}
     Column {

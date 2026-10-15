@@ -3,7 +3,6 @@ package app.jmdownloader.android
 import android.app.*
 import android.content.Intent
 import android.graphics.*
-import android.graphics.pdf.PdfDocument
 import android.graphics.pdf.PdfRenderer
 import android.os.*
 import androidx.core.app.NotificationCompat
@@ -15,6 +14,10 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
+import com.tom_roush.pdfbox.pdmodel.PDPage
+import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
+import com.tom_roush.pdfbox.pdmodel.common.PDRectangle
+import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.io.MemoryUsageSetting
 
@@ -47,7 +50,7 @@ class DownloadService: Service() {
     }
     override fun onDestroy(){scope.cancel();super.onDestroy()}
     // Android 15's data-sync budget can stop a long-running service; leave resumable checkpoints.
-    override fun onTimeout(startId: Int,fgsType: Int){store.state.value.jobs.filter{it.id in running}.forEach{store.pause(it.id)};stopSelf()}
+    override fun onTimeout(startId: Int,fgsType: Int){store.state.value.jobs.filter{running.containsKey(it.id)}.forEach{store.pause(it.id)};stopSelf()}
     private suspend fun download(initial: DownloadTask){
         val id=initial.id;val work=File(filesDir,"downloads/$id").apply{mkdirs()};val p=store.state.value.settings
         try{
@@ -73,18 +76,14 @@ class DownloadService: Service() {
             currentCoroutineContext().ensureActive();store.updateJob(id){it.copy(phase=Phase.EXPORTING,rendered=0)}
             val part=File(store.pdfRoot,".${id}.part");val metadata=File(store.pdfRoot,".${id}.meta.part")
             try {
-                val document=PdfDocument()
-                try{pages.forEachIndexed { n,page->
-                    currentCoroutineContext().ensureActive();val bitmap=decodePage(File(work,"$n.img"),page,initial.comic.platform)
-                    try{val sheet=document.startPage(PdfDocument.PageInfo.Builder(bitmap.width,bitmap.height,n+1).create());sheet.canvas.drawBitmap(bitmap,0f,0f,null);document.finishPage(sheet)}finally{bitmap.recycle()}
-                    store.updateJob(id){it.copy(rendered=n+1)}
-                };part.outputStream().use{document.writeTo(it)}}finally{document.close()}
+                assemblePDF(work,initial.comic,pages,metadata){n->store.updateJob(id){it.copy(rendered=n)}}
                 currentCoroutineContext().ensureActive()
-                // Metadata retains exact tags for local preview, including after source caches are removed.
-                PDDocument.load(part,MemoryUsageSetting.setupTempFileOnly()).use{pdf->pdf.documentInformation.apply{title=initial.comic.title;subject="${initial.comic.platform.label} ${initial.comic.id}";keywords=initial.comic.tags.joinToString(",")};pdf.save(metadata)}
                 ParcelFileDescriptor.open(metadata,ParcelFileDescriptor.MODE_READ_ONLY).use{fd->PdfRenderer(fd).use{require(it.pageCount==pages.size){"PDF 页数校验失败"}}}
                 currentCoroutineContext().ensureActive()
-                val name="${initial.comic.platform.name}-${initial.comic.id}-${ProtocolCrypto.safeName(initial.comic.title)}.pdf";val target=File(store.pdfRoot,name);require(!target.exists()||target.delete()){"无法替换 PDF"};require(metadata.renameTo(target)){"PDF 保存失败"}
+                val stem="${initial.comic.platform.name}-${initial.comic.id}-${ProtocolCrypto.safeName(initial.comic.title)}"
+                var target=File(store.pdfRoot,"$stem.pdf");var suffix=1
+                while(target.exists())target=File(store.pdfRoot,"$stem (${suffix++}).pdf")
+                require(metadata.renameTo(target)){"PDF 保存失败"};val name=target.name
                 store.updateJob(id){it.copy(phase=Phase.COMPLETED,rendered=pages.size,output=target.path)};store.feedback(Section.DOWNLOADS,Feedback("${initial.comic.title} · PDF 已保存",100));store.log("PDF 已保存：$name")
                 work.deleteRecursively()
             }finally{part.delete();metadata.delete()}
@@ -109,4 +108,18 @@ fun mediaAlternatives(raw: String,platform: Platform): List<String>{
     val values=mutableListOf(u.newBuilder().encodedPath(u.encodedPath.replace("/static/tobs/","/static/")).build().toString())
     if(u.host in storage){storage.forEach{values+=u.newBuilder().host(it).build().toString()};if(u.encodedPath.startsWith("/static/tobeimg/"))image.forEach{values+=u.newBuilder().host(it).encodedPath("/"+u.encodedPath.removePrefix("/static/tobeimg/")).build().toString()}}
     if(u.host in image)image.forEach{values+=u.newBuilder().host(it).build().toString()};return values.distinct()
+}
+
+// Image streams spill to a private temporary file; a long book does not retain every bitmap.
+suspend fun assemblePDF(work: File,comic: Comic,pages: List<Page>,target: File,progress: (Int)->Unit){
+    PDDocument(MemoryUsageSetting.setupTempFileOnly().setTempDir(work)).use{document->
+        document.documentInformation.apply{title=comic.title;subject="${comic.platform.label} ${comic.id}";keywords=comic.tags.joinToString(",")}
+        pages.forEachIndexed{index,page->
+            currentCoroutineContext().ensureActive()
+            val bitmap=decodePage(File(work,"$index.img"),page,comic.platform)
+            try{bitmap.setHasAlpha(false);val sheet=PDPage(PDRectangle(bitmap.width.toFloat(),bitmap.height.toFloat()));document.addPage(sheet);val image=JPEGFactory.createFromImage(document,bitmap,0.94f);PDPageContentStream(document,sheet).use{it.drawImage(image,0f,0f,bitmap.width.toFloat(),bitmap.height.toFloat())}}finally{bitmap.recycle()}
+            progress(index+1)
+        }
+        currentCoroutineContext().ensureActive();document.save(target)
+    }
 }

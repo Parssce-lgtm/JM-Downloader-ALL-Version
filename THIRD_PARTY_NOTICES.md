@@ -1,6 +1,6 @@
 # Protocol reference
 
-JM API authentication, response decoding and strip rearrangement are ported from jmcomic 2.7.7 (https://github.com/hect0x7/JMComic-Crawler-Python). No Python runtime or third-party binary is bundled.
+JM API authentication, response decoding and strip rearrangement are ported from jmcomic 2.7.7 (https://github.com/hect0x7/JMComic-Crawler-Python). The iOS application does not bundle Python or third-party binaries. The independent Android application uses the libraries listed below.
 
 MIT License
 
@@ -32,3 +32,16 @@ PicACG request headers, HMAC signing, routes and media URL formats follow the pr
 Media route compatibility (tobeimg/tobs and known image CDN names) was checked against https://github.com/tonquer/picacg-qt/blob/main/src/server/req.py on 2026-10-11. These protocol mappings are independently implemented with URLComponents and URLSession; no Python code or third-party media is packaged.
 
 Recommendation scoring and tag filtering are project-specific logic; no personal account data or credentials are bundled.
+
+
+# Android dependencies
+
+- AndroidX / Jetpack Compose: Apache License 2.0, Google and Android Open Source Project contributors.
+- Kotlin / kotlinx.coroutines: Apache License 2.0, JetBrains contributors.
+- OkHttp: Apache License 2.0, Square contributors.
+- Coil: Apache License 2.0, Coil contributors.
+- PDFBox-Android / Apache PDFBox / FontBox: Apache License 2.0, Tom Roush and Apache Software Foundation contributors.
+- ICU4J 76.1: Unicode/ICU license, Unicode, Inc. and contributors.
+- desugar_jdk_libs: GPLv2 with Classpath Exception, OpenJDK contributors; Android support portions use Apache License 2.0.
+
+The Android APK retains dependency LICENSE / NOTICE resources. Apache License 2.0 is also included in app assets. Dependency versions are pinned in android/app/build.gradle.kts.

@@ -20,7 +20,7 @@ import kotlinx.coroutines.*
     Scaffold(topBar={TopAppBar(title={Text(destination.ifEmpty{"设置"})},navigationIcon={IconButton(onClick={if(destination.isEmpty())onBack()else destination=""}){Icon(Icons.Outlined.ArrowBack,"返回")}})}){padding->LazyColumn(Modifier.padding(padding).fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         when(destination){
             ""->{
-                item{Text("切换平台",style=MaterialTheme.typography.titleMedium);SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()){Platform.entries.forEachIndexed{i,platform->SegmentedButton(selected=s.settings.platform==platform,onClick={save(s.settings.copy(platform=platform))},shape=SegmentedButtonDefaults.itemShape(i,Platform.entries.size)){Text(platform.label)}}}
+                item{Text("切换平台",style=MaterialTheme.typography.titleMedium);SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()){Platform.entries.forEachIndexed{i,platform->SegmentedButton(selected=s.settings.platform==platform,onClick={save(s.settings.copy(platform=platform))},shape=SegmentedButtonDefaults.itemShape(i,Platform.entries.size)){Text(platform.label)}}}}
                 item{HorizontalDivider();Text(s.library?.let{"${it.platform.label} · ${it.username}"}?:"尚未登录",Modifier.padding(top=12.dp));if(s.owner.isNotEmpty())TextButton(onClick={store.logout()}){Text("退出登录")}}
                 item{OutlinedTextField(user,{user=it},label={Text(if(s.settings.platform==Platform.JM)"用户名"else"邮箱")},singleLine=true,modifier=Modifier.fillMaxWidth())}
                 item{OutlinedTextField(password,{password=it},label={Text("密码")},visualTransformation=PasswordVisualTransformation(),singleLine=true,modifier=Modifier.fillMaxWidth())}

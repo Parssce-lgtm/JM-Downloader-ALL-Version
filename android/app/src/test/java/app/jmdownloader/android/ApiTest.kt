@@ -6,6 +6,19 @@ import org.junit.Test
 import org.json.JSONObject
 
 class ApiTest {
+    @Test fun jmLoginFoldersAndManifestPreserveProtocol()=runBlocking {
+        val server=MockWebServer();server.dispatcher=object:Dispatcher(){override fun dispatch(r:RecordedRequest):MockResponse {
+            if(r.requestUrl!!.encodedPath=="/chapter_view_template")return MockResponse().setBody("var scramble_id = 123;")
+            val body=when(r.requestUrl!!.encodedPath){
+                "/setting"->"{\"jm3_version\":\"2.1.9\"}"
+                "/login"->"{\"uid\":\"7\",\"s\":\"session-test\"}"
+                "/favorite"->"{\"total\":1,\"list\":[{\"id\":\"123\",\"name\":\"fixture\"}],\"folder_list\":[]}"
+                "/album"->"{\"name\":\"fixture\",\"tags\":[\"剧情\"],\"series\":[]}"
+                "/chapter"->"{\"images\":[\"a.jpg\",\"b.jpg\"]}"
+                else->"{}"
+            };return MockResponse().setBody("{\"code\":200,\"data\":$body}")}}
+        server.start();try{val api=ComicApi(Platform.JM,Settings(jmHosts="example.com"),testBase=server.url("/").toString().trimEnd('/'));api.login("name","password");val favorites=api.favorites{_,_->};assertEquals(1,favorites.size);val full=api.detail(favorites[0]);assertEquals("123",full.id);assertEquals(listOf("剧情"),full.tags);val pages=api.manifest(full);assertEquals(2,pages.size);assertEquals(123,pages[0].scramble);assertEquals("https://cdn-msp.jmapiproxy1.cc/media/photos/123/a.jpg",pages[0].url);val requests=(0 until server.requestCount).map{server.takeRequest()};assertTrue(requests.filter{it.requestUrl!!.encodedPath=="/favorite"}.all{it.getHeader("Cookie")=="AVS=session-test"});assertTrue(requests.any{it.getHeader("tokenparam")!!.endsWith(",2.1.9")})}finally{server.shutdown()}
+    }
     @Test fun multiTagUsesFullDetailAndSkipsRemovedCandidates()=runBlocking {
         val server=MockWebServer();server.dispatcher=object:Dispatcher(){override fun dispatch(r:RecordedRequest):MockResponse {
             val path=r.requestUrl!!.encodedPath

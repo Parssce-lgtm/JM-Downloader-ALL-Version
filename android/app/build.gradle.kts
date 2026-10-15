@@ -29,7 +29,7 @@ android {
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { isCoreLibraryDesugaringEnabled = true; sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
-    packaging { resources.excludes += setOf("META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*") }
+    packaging { resources.merges += setOf("META-INF/LICENSE*", "META-INF/NOTICE*"); resources.excludes += setOf("META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/DEPENDENCIES") }
     testOptions { animationsDisabled = true }
 }
 dependencies {

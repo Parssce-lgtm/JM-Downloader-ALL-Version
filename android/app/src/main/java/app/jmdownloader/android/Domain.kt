@@ -8,7 +8,7 @@ import java.security.MessageDigest
 import javax.crypto.Cipher
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
-import java.util.Base64
+import okio.ByteString.Companion.decodeBase64
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -39,8 +39,8 @@ class NetworkFailure(message: String, cause: Throwable? = null): Exception(messa
 data class Session(var host: String = "", var version: String = "2.1.7", var token: String = "", var cookies: MutableMap<String,String> = java.util.concurrent.ConcurrentHashMap())
 
 object TextMatch {
-    private val simplifier = ThreadLocal.withInitial { Transliterator.getInstance("Traditional-Simplified") }
-    private val traditional = ThreadLocal.withInitial { Transliterator.getInstance("Simplified-Traditional") }
+    private val simplifier = object: ThreadLocal<Transliterator>() { override fun initialValue()=Transliterator.getInstance("Traditional-Simplified") }
+    private val traditional = object: ThreadLocal<Transliterator>() { override fun initialValue()=Transliterator.getInstance("Simplified-Traditional") }
     fun normalize(s: String): String = simplifier.get().transliterate(Normalizer.normalize(s,Normalizer.Form.NFKC)).trim().lowercase(Locale.ROOT)
     fun variants(s: String): List<String> = listOf(s, simplifier.get().transliterate(s),traditional.get().transliterate(simplifier.get().transliterate(s))).distinct()
     fun hasTag(comic: Comic, tag: String) = normalize(tag).isNotEmpty() && comic.tags.any { normalize(it)==normalize(tag) }
@@ -63,10 +63,10 @@ sealed class Query {
 object ProtocolCrypto {
     const val JM_SECRET = "185Hcomic3PAPP7R"
     const val PICA_KEY = "C69BAF41DA5ABD1FFEDC6D2FEA56B"
-    private val picaSecret = Base64.getDecoder().decode("fmR9JFE3JGVJbmk9Vik5XFJLL1AuUk00OzlbN3xAL0NBfWJ+T1chMz9FVmA6PD5NN3BkZFVCTDVufDAvKkNu")
+    private val picaSecret = "fmR9JFE3JGVJbmk9Vik5XFJLL1AuUk00OzlbN3xAL0NBfWJ+T1chMz9FVmA6PD5NN3BkZFVCTDVufDAvKkNu".decodeBase64()!!.toByteArray()
     fun digest(algorithm: String, bytes: ByteArray) = MessageDigest.getInstance(algorithm).digest(bytes).joinToString(""){"%02x".format(it.toInt() and 255)}
     fun md5(s: String) = digest("MD5",s.toByteArray(Charsets.UTF_8))
-    fun decrypt(data: String, time: String): String { val cipher=Cipher.getInstance("AES/ECB/PKCS5Padding");cipher.init(Cipher.DECRYPT_MODE,SecretKeySpec(md5(time+JM_SECRET).toByteArray(Charsets.UTF_8),"AES"));return cipher.doFinal(Base64.getMimeDecoder().decode(data)).toString(Charsets.UTF_8) }
+    fun decrypt(data: String, time: String): String { val cipher=Cipher.getInstance("AES/ECB/PKCS5Padding");cipher.init(Cipher.DECRYPT_MODE,SecretKeySpec(md5(time+JM_SECRET).toByteArray(Charsets.UTF_8),"AES"));return cipher.doFinal((data.decodeBase64()?:throw IllegalArgumentException("无效的接口编码")).toByteArray()).toString(Charsets.UTF_8) }
     fun picaSignature(route: String, method: String, time: String, nonce: String): String { val mac=Mac.getInstance("HmacSHA256");mac.init(SecretKeySpec(picaSecret,"HmacSHA256"));return mac.doFinal((route+time+nonce+method+PICA_KEY).lowercase(Locale.ROOT).toByteArray(Charsets.UTF_8)).joinToString(""){"%02x".format(it.toInt() and 255)} }
     fun strips(chapter: Int, filename: String, scramble: Int): Int { if(chapter<scramble)return 0;if(chapter<268850)return 10;val mod=if(chapter<421926)10 else 8;return (md5("$chapter$filename").last().code % mod)*2+2 }
     data class Slice(val source: Int,val destination: Int,val height: Int)
