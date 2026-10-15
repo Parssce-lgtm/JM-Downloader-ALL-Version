@@ -65,6 +65,7 @@ Android 下载使用前台服务和通知，应用被强行停止或系统限制
 ### 1.8.0 / iOS Build 25
 
 - iOS 底部共享提示卡片在下载、收藏与推荐之间保持固定材质和位置，仅文字渐隐渐显；切换 PDF 预览时整张卡片平滑淡出、淡入，隐藏期间不接受点击。
+- 验证记录：[iOS 26 提示卡片与 PDF 切换检查](https://github.com/Parssce-lgtm/JM-Downloader-ALL-Version/actions/runs/38815184994)。
 
 ### 1.8.0
 
