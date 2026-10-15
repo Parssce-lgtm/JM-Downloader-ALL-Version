@@ -1,0 +1,63 @@
+name: Android signed APK visual check
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful APK build run ID
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/download-artifact@v4
+        with:
+          name: Android-1.8.0
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+          path: android-build
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            adb install android-build/outputs/apk/release/app-release.apk
+            adb shell am start -W -n app.jmdownloader.android/.MainActivity
+            sleep 4
+            adb shell uiautomator dump /sdcard/window.xml
+            adb pull /sdcard/window.xml main.xml
+            grep 'package="app.jmdownloader.android"' main.xml
+            adb shell screencap -p /sdcard/light.png
+            adb pull /sdcard/light.png android-light.png
+            adb shell cmd uimode night yes
+            sleep 3
+            adb shell screencap -p /sdcard/dark.png
+            adb pull /sdcard/dark.png android-dark.png
+            python scripts/android-open-settings.py
+            sleep 2
+            adb shell screencap -p /sdcard/settings.png
+            adb pull /sdcard/settings.png android-settings.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Android-native-visuals
+          path: |
+            android-*.png
+            main.xml

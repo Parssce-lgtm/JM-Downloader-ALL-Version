@@ -84,13 +84,13 @@ jobs:
             adb shell am instrument -w -r app.jmdownloader.android.test/androidx.test.runner.AndroidJUnitRunner | tee device-tests.txt
             ! grep -E 'FAILURES|INSTRUMENTATION_FAILED|shortMsg=' device-tests.txt
             grep -E 'OK \([0-9]+ tests?\)' device-tests.txt
-            adb shell screencap -p /sdcard/screen.png
-            adb pull /sdcard/screen.png screen-${{ matrix.api }}.png
             adb uninstall app.jmdownloader.android
             adb install android-build/outputs/apk/release/app-release.apk
             adb shell am start -W -n app.jmdownloader.android/.MainActivity
             sleep 3
             adb shell pidof app.jmdownloader.android
+            adb shell screencap -p /sdcard/screen.png
+            adb pull /sdcard/screen.png screen-${{ matrix.api }}.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:
