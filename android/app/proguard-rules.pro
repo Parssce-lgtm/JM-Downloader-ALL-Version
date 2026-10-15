@@ -5,3 +5,5 @@
 -keep class com.ibm.icu.text.Transliterator { *; }
 -keep class com.tom_roush.pdfbox.** { *; }
 -keep class com.tom_roush.fontbox.** { *; }
+
+-keep class com.ibm.icu.** { *; }

@@ -29,7 +29,7 @@ data class Feedback(val message: String = "准备就绪", val percent: Int = 0, 
 data class SearchState(val query: String = "", val results: List<Comic> = emptyList(), val page: Int = 0, val more: Boolean = false, val feedback: Feedback = Feedback())
 data class AppState(val settings: Settings = Settings(), val owner: String = "", val libraries: Map<String,Library> = emptyMap(), val jobs: List<DownloadTask> = emptyList(), val searches: Map<Section,SearchState> = emptyMap(), val feedback: Map<Section,Feedback> = emptyMap(), val logs: List<String> = emptyList(), val pendingDislikes: Set<String> = emptySet(), val alert: String? = null) {
     val library get() = libraries[owner]
-    val visibleJobs get() = jobs.filter { it.comic.platform==settings.platform && (owner.isEmpty() || it.owner==owner) }.sortedWith(compareBy<DownloadTask>{it.phase.order}.thenByDescending{it.created})
+    val visibleJobs get() = jobs.filter { it.comic.platform==settings.platform && it.owner==owner }.sortedWith(compareBy<DownloadTask>{it.phase.order}.thenByDescending{it.created})
 }
 data class SearchPage(val comics: List<Comic>, val total: Int, val pages: Int, val query: String)
 data class SearchBatch(val comics: List<Comic>, val more: Boolean)
