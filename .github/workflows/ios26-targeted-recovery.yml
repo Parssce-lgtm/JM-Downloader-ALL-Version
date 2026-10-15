@@ -6,6 +6,10 @@ on:
         description: Frozen source commit to verify and build
         required: true
         type: string
+      build_only:
+        description: Build IPA without rerunning the selected UI checks
+        type: boolean
+        default: false
       test_identifiers:
         description: Comma-separated XCTest identifiers to recheck
         required: true
@@ -28,6 +32,7 @@ jobs:
           xcodebuild -version
           git rev-parse HEAD
       - name: Recheck the selected test
+        if: ${{ !inputs.build_only }}
         env:
           JM_RECHECK_TESTS: ${{ inputs.test_identifiers }}
         run: |
