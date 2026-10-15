@@ -59,7 +59,9 @@ struct ContentView: View {
                         .accessibilityIdentifier("scrollToTop")
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { settings = true } label: { Image(systemName: "gearshape") }
+                    Button { settings = true } label: {
+                        Image(systemName: "gearshape").foregroundStyle(navigation.configuration.preferences.accent)
+                    }
                         .accessibilityLabel("设置").accessibilityIdentifier("settings")
                 }
             }
