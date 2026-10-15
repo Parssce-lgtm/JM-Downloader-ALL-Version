@@ -38,7 +38,7 @@ struct ContentView: View {
             }.frame(maxWidth: layout.contentWidth).frame(maxWidth: .infinity)
                 .background(Color(uiColor: .systemGroupedBackground))
                 .overlay(alignment: .bottom) {
-                    SharedLibraryNotice(store: store, favorites: pageStates[.favorites]!, recommendations: pageStates[.recommendations]!, tab: tab == .preview ? lastNoticeTab : tab, onLogs: { logHistory = true })
+                    SharedLibraryNotice(store: store, favorites: pageStates[.favorites]!, recommendations: pageStates[.recommendations]!, tab: tab == .preview ? lastNoticeTab : tab, isVisible: tab != .preview, onLogs: { logHistory = true })
                         .padding(.horizontal, layout.noticeInset(bottomSafeArea: bottomInset))
                         .frame(maxWidth: layout.contentWidth)
                         .padding(.bottom, layout.noticeInset(bottomSafeArea: bottomInset))
@@ -687,6 +687,7 @@ private struct ComicCardStyle: ViewModifier {
     @ObservedObject var favorites: LibraryPageState
     @ObservedObject var recommendations: LibraryPageState
     let tab: LibraryTab
+    let isVisible: Bool
     let onLogs: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
@@ -700,8 +701,10 @@ private struct ComicCardStyle: ViewModifier {
             .onTapGesture { if tab == .downloads { onLogs() } }
             .modifier(NoticeCapsuleStyle(transparent: true))
             .accessibilityRepresentation {
-                if tab == .downloads { Button(message(for: tab), action: onLogs) }
-                else { Text(message(for: tab)) }
+                if isVisible {
+                    if tab == .downloads { Button(message(for: tab), action: onLogs) }
+                    else { Text(message(for: tab)) }
+                }
             }
             .accessibilityIdentifier("sharedNoticeCapsule")
     }
