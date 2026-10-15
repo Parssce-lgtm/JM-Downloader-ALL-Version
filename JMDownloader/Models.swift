@@ -182,6 +182,7 @@ struct Preferences: Codable, Equatable, Sendable {
     var selectedPlatform: ComicPlatform? = nil
     var appearance: String? = nil
     var themeColor: String? = nil
+    var previewEnabled: Bool? = nil
     @discardableResult mutating func restoreRootDirectoryDefault() -> Bool {
         guard rootDirectoryDefaultRestored != true else { return false }
         storageRootBookmark = nil; directoryBookmark = nil

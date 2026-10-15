@@ -26,8 +26,12 @@ struct SettingsView: View {
                     NavigationLink { ThemeSettingsView(store: store) } label: { Label("主题设置", systemImage: "paintpalette") }.accessibilityIdentifier("themeSettings")
                     NavigationLink { CacheSettingsView(store: store) } label: { Label("缓存与下载目录", systemImage: "internaldrive") }.accessibilityIdentifier("cacheSettings")
                 }
+                Section {
+                    NavigationLink { DeveloperSettingsView(store: store) } label: { Label("开发者功能", systemImage: "hammer") }
+                        .accessibilityIdentifier("developerSettings")
+                }
                 Section("关于") {
-                    LabeledContent("版本", value: "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.7.0") (Build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "23"))")
+                    LabeledContent("版本", value: "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.8.0") (Build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "24"))")
                     LabeledContent("系统", value: AppAppearance.systemDescription)
                     NavigationLink("第三方许可") {
                         ScrollView {

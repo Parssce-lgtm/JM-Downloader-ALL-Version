@@ -3,7 +3,7 @@ import UIKit
 import Combine
 
 enum SelectionMode { case none, download, hide }
-enum LibraryTab: String, CaseIterable { case downloads = "下载任务", favorites = "漫画收藏", recommendations = "漫画推荐" }
+enum LibraryTab: String, CaseIterable { case preview = "PDF 预览", downloads = "下载任务", favorites = "漫画收藏", recommendations = "漫画推荐" }
 
 struct ContentView: View {
     let store: AppStore
@@ -14,31 +14,35 @@ struct ContentView: View {
     @State private var bottomInset: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pageStates = Dictionary(uniqueKeysWithValues: LibraryTab.allCases.map { ($0, LibraryPageState()) })
+    private var visibleTabs: [LibraryTab] { LibraryTab.allCases.filter { $0 != .preview || store.preferences.previewEnabled == true } }
     var body: some View {
         NavigationStack {
             GeometryReader { geometry in
             let layout = AppLayout(width: geometry.size.width, height: geometry.size.height)
             VStack(spacing: 10) {
                 Picker("浏览类型", selection: $tab) {
-                    ForEach(LibraryTab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    ForEach(visibleTabs, id: \.self) { Text($0.rawValue).tag($0) }
                 }.pickerStyle(.segmented).accessibilityIdentifier("libraryTabs")
                     .padding(.horizontal, layout.sideInset)
                 TabView(selection: $tab) {
-                    ForEach(LibraryTab.allCases, id: \.self) { item in
-                        LibraryModuleView(store: store, pageState: pageStates[item]!, tab: item, isActive: item == tab, bottomInset: bottomInset, onSettings: { settings = true })
-                            .tint(store.preferences.accent).environment(\.appLayout, layout)
+                    ForEach(visibleTabs, id: \.self) { item in
+                        Group {
+                            if item == .preview { PDFLibraryView(store: store) }
+                            else { LibraryModuleView(store: store, pageState: pageStates[item]!, tab: item, isActive: item == tab, bottomInset: bottomInset, onSettings: { settings = true }) }
+                        }.tint(store.preferences.accent).environment(\.appLayout, layout)
                             .tag(item).accessibilityHidden(item != tab)
                     }
                 }.tabViewStyle(.page(indexDisplayMode: .never))
-                    .animation(reduceMotion ? nil : .default, value: tab)
                     .accessibilityIdentifier("libraryPager")
             }.frame(maxWidth: layout.contentWidth).frame(maxWidth: .infinity)
                 .background(Color(uiColor: .systemGroupedBackground))
                 .overlay(alignment: .bottom) {
+                    if tab != .preview {
                     SharedLibraryNotice(store: store, favorites: pageStates[.favorites]!, recommendations: pageStates[.recommendations]!, tab: tab, onLogs: { logHistory = true })
                         .padding(.horizontal, layout.noticeInset(bottomSafeArea: bottomInset))
                         .frame(maxWidth: layout.contentWidth)
                         .padding(.bottom, layout.noticeInset(bottomSafeArea: bottomInset))
+                    }
                 }
                 .ignoresSafeArea(.container, edges: .bottom)
             }
@@ -60,6 +64,7 @@ struct ContentView: View {
             .navigationDestination(isPresented: $logHistory) { LogHistoryView(store: store) }
             .onChangeCompat(of: store.account) { _, _ in resetPages() }
             .onChangeCompat(of: store.platform) { _, _ in resetPages() }
+            .onChangeCompat(of: store.preferences.previewEnabled) { _, enabled in if enabled != true && tab == .preview { tab = .favorites } }
             .alert("提示", isPresented: Binding(get: { store.alert != nil && !settings }, set: { if !$0 && !settings { store.alert = nil } })) {
                 Button("好") { store.alert = nil }
             } message: { Text(store.alert ?? "") }
@@ -680,9 +685,9 @@ private struct ComicCardStyle: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         ZStack {
-            noticeText(.downloads, index: 0)
-            noticeText(.favorites, index: 1)
-            noticeText(.recommendations, index: 2)
+            noticeText(.downloads)
+            noticeText(.favorites)
+            noticeText(.recommendations)
             noticeIcons
         }.foregroundStyle(.primary).frame(maxWidth: .infinity).frame(height: 66)
             .contentShape(Capsule())
@@ -694,17 +699,14 @@ private struct ComicCardStyle: ViewModifier {
             .accessibilityIdentifier("sharedNoticeCapsule")
             .animation(reduceMotion ? nil : .default, value: tab)
     }
-    private func noticeText(_ page: LibraryTab, index: Int) -> some View {
+    private func noticeText(_ page: LibraryTab) -> some View {
         Text(message(for: page))
             .padding(.horizontal, 52)
             .frame(maxWidth: .infinity)
             .font(.caption)
             .monospacedDigit()
             .multilineTextAlignment(.center).lineLimit(2)
-            .opacity(noticeOpacity(at: index))
-    }
-    private func noticeOpacity(at index: Int) -> Double {
-        tab == LibraryTab.allCases[index] ? 1 : 0
+            .opacity(tab == page ? 1 : 0)
     }
     private var noticeIcons: some View {
         HStack {
