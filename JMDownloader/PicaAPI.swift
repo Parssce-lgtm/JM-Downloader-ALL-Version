@@ -10,10 +10,10 @@ actor PicaAPI: ComicAPI {
     private let session: URLSession
     private var token = ""
 
-    init(preferences: Preferences, savedSession: ServiceSession? = nil, tagCache: ComicTagCache = ComicTagCache()) throws {
+    init(preferences: Preferences, savedSession: ServiceSession? = nil, tagCache: ComicTagCache = ComicTagCache(), configuration: URLSessionConfiguration? = nil) throws {
         self.tagCache = tagCache
         host = try Validation.hosts(preferences.effectivePicaDomain)[0]
-        let config = URLSessionConfiguration.ephemeral
+        let config = configuration ?? URLSessionConfiguration.ephemeral
         try NetworkConfiguration.apply(preferences, to: config)
         config.timeoutIntervalForResource = 30
         session = URLSession(configuration: config)
@@ -134,11 +134,13 @@ actor PicaAPI: ComicAPI {
         return [first.comics] .flatMap { $0 } + rest.flatMap { $0 }
     }
     func search(_ query: String, page: Int = 1) async throws -> [Comic] {
-        let rows = try await sortedSearch(query, page: page, sort: .latest)
+        let pages = try await ConcurrentLoad.map(ComicSearchQuery.variants(query), limit: 2) {
+            try await self.sortedSearch($0, page: page, sort: .latest)
+        }
+        let rows = uniqueComics(pages.flatMap { $0 })
         let verified = try await ConcurrentLoad.map(rows, limit: 3) { comic -> Comic? in
-            if ComicSearchQuery.matchesText(comic, query) { return comic }
             do {
-                let full = try await self.recommendationDetail(comic)
+                let full = try await self.searchDetail(comic)
                 return ComicSearchQuery.matchesText(full, query) ? full : nil
             } catch is RecommendationDetailUnavailable { return nil }
         }
@@ -146,17 +148,68 @@ actor PicaAPI: ComicAPI {
     }
     func searchTag(_ tag: String, page: Int = 1) async throws -> [Comic] {
         guard !tag.isEmpty else { throw JMError.message("请输入 # 后面的标签。") }
-        let rows = try await sortedSearch(tag, page: page, sort: .latest)
-        let full = try await ConcurrentLoad.map(rows) { try await self.recommendationDetail($0) }
+        let pages = try await ConcurrentLoad.map(ComicSearchQuery.variants(tag), limit: 2) {
+            try await self.sortedSearch($0, page: page, sort: .latest)
+        }
+        let full = try await verifiedSearchComics(uniqueComics(pages.flatMap { $0 }))
         return full.filter { ComicSearchQuery.hasTag($0, tag) }
     }
+    func searchTags(_ tags: [String], page: Int) async throws -> [Comic] {
+        guard tags.count >= 2, tags.allSatisfy({ !$0.isEmpty }) else { throw JMError.message("请输入完整标签。") }
+        let samples = try await ConcurrentLoad.map(tags, limit: 2) { tag in
+            let variants = try await ConcurrentLoad.map(ComicSearchQuery.variants(tag), limit: 2) {
+                try await self.sortedSearchPage($0, page: 1, sort: .latest)
+            }
+            return variants.max(by: { $0.total < $1.total })!
+        }
+        guard let chosen = samples.min(by: { $0.total < $1.total }), chosen.total > 0 else { return [] }
+        let start = (max(1, page) - 1) * 3 + 1
+        guard start <= chosen.pages else { return [] }
+        let pages = try await ConcurrentLoad.map(Array(start...min(chosen.pages, start + 2)), limit: 2) { index in
+            if index == 1 { return chosen.comics }
+            return try await self.sortedSearchPage(chosen.query, page: index, sort: .latest).comics
+        }
+        return try await verifiedSearchComics(uniqueComics(pages.flatMap { $0 })).filter { comic in
+            tags.allSatisfy { ComicSearchQuery.hasTag(comic, $0) }
+        }
+    }
+    private func uniqueComics(_ comics: [Comic]) -> [Comic] {
+        var seen = Set<String>()
+        return comics.filter { seen.insert($0.id).inserted }
+    }
+    private func verifiedSearchComics(_ comics: [Comic]) async throws -> [Comic] {
+        try await ConcurrentLoad.map(comics, limit: 3) { comic -> Comic? in
+            do { return try await self.searchDetail(comic) }
+            catch is RecommendationDetailUnavailable { return nil }
+        }.compactMap { $0 }
+    }
+    private func searchDetail(_ candidate: Comic) async throws -> Comic {
+        let data = try await request("comics/\(try Self.comicID(candidate.id))")
+        guard let row = data["comic"] as? [String: Any], row["tags"] is [String] else { throw RecommendationDetailUnavailable() }
+        var full = try comic(row)
+        guard full.id == candidate.id else { throw RecommendationDetailUnavailable() }
+        full.folders = candidate.folders
+        full.coverURL = full.coverURL ?? candidate.coverURL
+        await tagCache.store(full.tags, for: full)
+        return full
+    }
+    private struct SearchPage: Sendable {
+        let query: String
+        let comics: [Comic]
+        let pages: Int
+        let total: Int
+    }
     private func sortedSearch(_ query: String, page: Int = 1, sort: RecommendationSort) async throws -> [Comic] {
+        try await sortedSearchPage(query, page: page, sort: sort).comics
+    }
+    private func sortedSearchPage(_ query: String, page: Int, sort: RecommendationSort) async throws -> SearchPage {
         let data = try await request("comics/advanced-search?page=\(page)", method: "POST",
                                      body: ["categories": [], "keyword": query, "sort": sort.picaOrder])
         guard let collection = data["comics"] as? [String: Any], let docs = collection["docs"] as? [[String: Any]] else {
             throw JMError.message("PicACG 搜索数据无效。")
         }
-        return try docs.map { try comic($0) }
+        return SearchPage(query: query, comics: try docs.map { try comic($0) },
+            pages: max(1, collection["pages"] as? Int ?? 1), total: collection["total"] as? Int ?? docs.count)
     }
     func recommendations(from favorites: [Comic]) async throws -> [Comic] {
         try await recommendations(from: favorites, sort: .latest, preferredTags: [], blacklist: [])

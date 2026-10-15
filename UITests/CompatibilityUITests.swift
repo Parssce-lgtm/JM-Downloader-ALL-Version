@@ -44,6 +44,7 @@ final class CompatibilityUITests: XCTestCase {
         }
         app.buttons["settings"].tap()
         XCTAssertTrue(app.navigationBars["设置"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["1.7.0 (Build 23)"].exists)
         app.buttons["comicSettings"].tap()
         XCTAssertTrue(app.navigationBars["已排除/隐藏"].waitForExistence(timeout: 5))
         app.navigationBars["已排除/隐藏"].buttons.firstMatch.tap()
@@ -113,6 +114,11 @@ final class CompatibilityUITests: XCTestCase {
         XCTAssertLessThan(exit.frame.height, 60)
         exit.tap()
         XCTAssertTrue(app.staticTexts["等待继续的漫画"].waitForExistence(timeout: 5))
+        app.buttons["openComicSearch"].tap()
+        app.textFields["comicSearchField"].typeText("已保存的漫画")
+        app.buttons["submitComicSearch"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["comicCard-10001"].firstMatch.waitForExistence(timeout: 10))
+        capture(app, "explicit-search-includes-downloaded")
     }
     @MainActor private func capture(_ app: XCUIApplication, _ name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())

@@ -14,7 +14,10 @@ private final class TagCatalogProtocol: URLProtocol {
         let query = URLComponents(url: url, resolvingAgainstBaseURL: false)!.queryItems ?? []
         let id = query.first { $0.name == "id" }?.value ?? ""
         let tags = ["200": ["别的"], "201": ["剧情", "校园"], "202": ["剧情扩展", "校园"], "203": ["无关"],
-                    "204": ["純愛", "彩漫"], "205": ["純愛", "彩漫扩展"]][id] ?? ["剧情"]
+                    "204": ["純愛", "彩漫"], "205": ["純愛", "彩漫扩展"], "206": ["别的"], "207": ["别的"],
+                    "208": ["多页A"], "209": ["多页B"], "210": ["多页A", "多页B"]][id] ?? ["剧情"]
+        let titles = ["200": "剧情标题但没有该标签", "201": "真正含标签", "202": "仅含相似标签", "204": "正确的双标签漫画",
+                      "205": "相似标签漫画", "206": "完全无关", "207": "真正的纠错漫画"]
         var rows = [["id": "200", "name": "剧情标题但没有该标签"], ["id": "201", "name": "真正含标签"], ["id": "202", "name": "仅含相似标签"]]
         let searchQuery = query.first { $0.name == "search_query" }?.value ?? ""
         if searchQuery == "纯爱" || searchQuery == "純愛" {
@@ -26,21 +29,58 @@ private final class TagCatalogProtocol: URLProtocol {
             rows = [["id": "201", "name": "真正含标签"], ["id": "202", "name": "仅含相似标签"]]
         } else if searchQuery == "失效详情" {
             rows = [["id": "203", "name": "已下架漫画"]]
+        } else if searchQuery == "纠错漫画" || searchQuery == "糾錯漫畫" {
+            rows = [["id": "206", "name": "纠错漫画"], ["id": "207", "name": "服务器旧标题"]]
+        } else if searchQuery == "多页A" || searchQuery == "多頁A" {
+            rows = query.first { $0.name == "page" }?.value == "2"
+                ? [["id": "210", "name": "第二页才出现的交集"]] : [["id": "208", "name": "A"], ["id": "209", "name": "B"]]
+        } else if searchQuery == "多页B" || searchQuery == "多頁B" {
+            rows = [["id": "208", "name": "A"], ["id": "209", "name": "B"]]
         }
         if query.first(where: { $0.name == "main_tag" })?.value == "0" {
             rows.append(["id": "203", "name": "服务器混入的无关漫画"])
         }
         let data: Any
         if url.path == "/search" {
-            data = ["content": rows, "total": searchQuery == "纯爱" || searchQuery == "純愛" ? 100 : rows.count]
+            let total = searchQuery == "纯爱" || searchQuery == "純愛" ? 100
+                : (searchQuery == "多页A" || searchQuery == "多頁A" ? 3 : (searchQuery == "多页B" || searchQuery == "多頁B" ? 10 : rows.count))
+            data = ["content": rows, "total": total]
         } else if id == "203" {
             data = [Any]()
         } else {
-            data = ["id": id, "name": "fixture", "tags": tags]
+            data = ["id": id, "name": titles[id] ?? "fixture", "tags": tags]
         }
         let payload = try! JSONSerialization.data(withJSONObject: ["code": 200, "data": data])
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: payload); client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() { }
+}
+private final class PicaSearchCatalogProtocol: URLProtocol {
+    static let first = String(repeating: "a", count: 24)
+    static let second = String(repeating: "b", count: 24)
+    static let third = String(repeating: "c", count: 24)
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        let url = request.url!
+        let data: [String: Any]
+        if url.path == "/comics/advanced-search" {
+            let page = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "page" }?.value
+            let rows: [[String: Any]] = page == "2"
+                ? [["_id": Self.third, "title": "第二页候选"]]
+                : [["_id": Self.first, "title": "纯爱", "tags": ["純愛"]], ["_id": Self.second, "title": "旧标题"]]
+            data = ["comics": ["docs": rows, "pages": 2, "total": 3]]
+        } else {
+            let id = url.lastPathComponent
+            let title = id == Self.first ? "完全无关" : (id == Self.second ? "純愛的故事" : "第二页交集")
+            let tags = id == Self.first ? ["别的"] : (id == Self.second ? ["純愛"] : ["純愛", "彩漫"])
+            data = ["comic": ["_id": id, "title": title, "tags": tags]]
+        }
+        let payload = try! JSONSerialization.data(withJSONObject: ["code": 200, "data": data])
+        client?.urlProtocol(self, didReceive: HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: payload)
+        client?.urlProtocolDidFinishLoading(self)
     }
     override func stopLoading() { }
 }
@@ -134,6 +174,43 @@ final class RecommendationRefreshTests: XCTestCase {
         XCTAssertTrue(ComicSearchQuery.hasTag(comic, "ai绘图"))
         XCTAssertFalse(ComicSearchQuery.hasTag(comic, "剧情"))
         XCTAssertFalse(ComicSearchQuery.hasTag(comic, "AI"))
+        XCTAssertTrue(ComicSearchQuery.matchesText(Comic(id: "1", title: "純愛漫畫", tags: ["彩色"]), "纯爱漫画"))
+        XCTAssertTrue(ComicSearchQuery.matchesText(Comic(id: "1", title: "别的", tags: ["純愛"]), "纯爱"))
+    }
+    func testOrdinarySearchChecksCanonicalTitleInsteadOfTrustingSearchRows() async throws {
+        var preferences = Preferences(); preferences.domains = "tags.invalid"
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [TagCatalogProtocol.self]
+        let api = try JMAPI(preferences: preferences, configuration: config)
+        let result = try await api.search("纠错漫画", page: 1)
+        XCTAssertEqual(result.map(\.id), ["207"])
+        XCTAssertEqual(result.first?.title, "真正的纠错漫画")
+    }
+    func testMultipleTagsIncludeIntersectionBeyondFirstServerPage() async throws {
+        var preferences = Preferences(); preferences.domains = "tags.invalid"
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [TagCatalogProtocol.self]
+        let api = try JMAPI(preferences: preferences, configuration: config)
+        let result = try await api.searchTags(["多页A", "多页B"], page: 1)
+        XCTAssertEqual(result.map(\.id), ["210"])
+    }
+    func testExactTagSearchRefreshesStaleSearchMetadata() async throws {
+        var preferences = Preferences(); preferences.domains = "tags.invalid"
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [TagCatalogProtocol.self]
+        let cache = ComicTagCache()
+        await cache.store(["剧情"], for: Comic(id: "200", title: "旧元数据"))
+        let api = try JMAPI(preferences: preferences, configuration: config, tagCache: cache)
+        let result = try await api.searchTag("剧情", page: 1)
+        XCTAssertEqual(result.map(\.id), ["201"])
+    }
+    func testPicaSearchVerifiesTitlesTagsAndLaterIntersectionPages() async throws {
+        var preferences = Preferences(); preferences.picaDomain = "pica-search.invalid"
+        let config = URLSessionConfiguration.ephemeral; config.protocolClasses = [PicaSearchCatalogProtocol.self]
+        let api = try PicaAPI(preferences: preferences, configuration: config)
+        let plain = try await api.search("纯爱", page: 1)
+        XCTAssertEqual(plain.map(\.id), [PicaSearchCatalogProtocol.second])
+        let tag = try await api.searchTag("纯爱", page: 1)
+        XCTAssertEqual(tag.map(\.id), [PicaSearchCatalogProtocol.second])
+        let multiple = try await api.searchTags(["纯爱", "彩漫"], page: 1)
+        XCTAssertEqual(multiple.map(\.id), [PicaSearchCatalogProtocol.third])
     }
     func testJMMultipleTagsVerifyCompleteMetadataAndExcludePartialMatches() async throws {
         var preferences = Preferences(); preferences.domains = "tags.invalid"

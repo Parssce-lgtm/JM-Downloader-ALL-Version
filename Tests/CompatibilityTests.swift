@@ -5,6 +5,39 @@ import UIKit
 @testable import JMDownloader
 
 final class CompatibilityTests: XCTestCase {
+    @MainActor func testNativeSegmentVisualsMoveBetweenFractionalPagePositions() async throws {
+        let paging = LibraryPagingPosition()
+        let control = TrackingLibraryTabs(paging: paging)
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 414, height: 100))
+        let previous = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows).first { $0.isKeyWindow }
+        window.windowScene = previous?.windowScene
+        window.overrideUserInterfaceStyle = .light
+        let controller = UIViewController()
+        controller.view.backgroundColor = .systemGroupedBackground
+        window.rootViewController = controller
+        control.frame = CGRect(x: 12, y: 24, width: 390, height: 36)
+        controller.view.addSubview(control)
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true; previous?.makeKey() }
+        window.layoutIfNeeded()
+        func capture(_ name: String) -> Data {
+            let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
+                window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+            }
+            let attachment = XCTAttachment(image: image)
+            attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+            return image.pngData()!
+        }
+        paging.report(1.2)
+        try await Task.sleep(for: .milliseconds(400))
+        let early = capture("native-tabs-page-20-percent")
+        paging.report(1.8)
+        try await Task.sleep(for: .milliseconds(100))
+        let late = capture("native-tabs-page-80-percent")
+        XCTAssertNotEqual(early, late, "The native selection must visibly follow intermediate page positions")
+        paging.report(2)
+        XCTAssertEqual(control.selectedSegmentIndex, 2)
+    }
     @MainActor func testPDFProgressDoesNotInvalidateNavigationButThemeAndAlertsDo() {
         let store = AppStore(inMemory: true)
         let navigation = AppNavigationState(store: store)

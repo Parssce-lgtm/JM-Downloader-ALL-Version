@@ -2,8 +2,6 @@ import SwiftUI
 import UIKit
 import Combine
 
-// Only the shared notice viewport subscribes to these frame-by-frame updates. The
-// SwiftUI page tree does not rebuild while the finger is moving.
 @MainActor final class LibraryPagingPosition {
     let positions = CurrentValueSubject<CGFloat, Never>(1)
     var onTopDrag: ((CGFloat) -> Void)?
@@ -14,6 +12,8 @@ import Combine
     }
 }
 
+// Keep the same system segmented control used by Build 22's segmented Picker.
+// No replacement backgrounds, glass layers, labels or gesture recognizers.
 struct NativeLibraryTabs: UIViewRepresentable {
     @Binding var selection: LibraryTab
     let paging: LibraryPagingPosition
@@ -25,34 +25,26 @@ struct NativeLibraryTabs: UIViewRepresentable {
     }
     func updateUIView(_ control: TrackingLibraryTabs, context: Context) {
         context.coordinator.parent = self
-        control.selectedSegmentIndex = LibraryTab.allCases.firstIndex(of: selection)!
-    }
-    func sizeThatFits(_ proposal: ProposedViewSize, uiView: TrackingLibraryTabs, context: Context) -> CGSize? {
-        CGSize(width: proposal.width ?? uiView.intrinsicContentSize.width,
-               height: uiView.intrinsicContentSize.height)
+        control.synchronizeSelection(LibraryTab.allCases.firstIndex(of: selection)!)
     }
     final class Coordinator: NSObject {
         var parent: NativeLibraryTabs
         init(_ parent: NativeLibraryTabs) { self.parent = parent }
-        @objc func selectTab(_ control: UISegmentedControl) {
-            guard LibraryTab.allCases.indices.contains(control.selectedSegmentIndex) else { return }
+        @objc func selectTab(_ control: TrackingLibraryTabs) {
+            guard !control.handlingTouch, LibraryTab.allCases.indices.contains(control.selectedSegmentIndex) else { return }
             parent.selection = LibraryTab.allCases[control.selectedSegmentIndex]
         }
     }
 }
 
-/// The same fractional position drives the page and the selected glass pill.
-/// UIControl tracking also accepts a gesture that begins over an unselected tab.
 final class TrackingLibraryTabs: UISegmentedControl {
-    private let indicator = CALayer()
-    private var glassIndicator: UIVisualEffectView?
-    private var glassLabels: [UILabel] = []
-    private var subscription: AnyCancellable?
     private let paging: LibraryPagingPosition
+    private var subscription: AnyCancellable?
+    private var transition: UIViewPropertyAnimator?
+    private var transitionStart: Int?
+    private var touchStart = 1
     private var position: CGFloat = 1
-    private var pressing = false
-    private var showingGlass: Bool?
-    var indicatorFrame: CGRect { indicator.frame }
+    private(set) var handlingTouch = false
 
     init(paging: LibraryPagingPosition) {
         self.paging = paging
@@ -60,170 +52,81 @@ final class TrackingLibraryTabs: UISegmentedControl {
         for (index, tab) in LibraryTab.allCases.enumerated() {
             insertSegment(withTitle: tab.rawValue, at: index, animated: false)
         }
+        selectedSegmentIndex = 1
         accessibilityIdentifier = "libraryTabs"
         accessibilityLabel = "浏览类型"
-        selectedSegmentTintColor = .clear
-        let format = UIGraphicsImageRendererFormat(); format.opaque = false
-        let clear = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1), format: format).image { _ in }
-        let states: [UIControl.State] = [.normal, .selected, .highlighted, [.selected, .highlighted]]
-        for state in states { setBackgroundImage(clear, for: state, barMetrics: .default) }
-        for left in states { for right in states {
-            setDividerImage(clear, forLeftSegmentState: left, rightSegmentState: right, barMetrics: .default)
-        } }
-        layer.insertSublayer(indicator, at: 0)
-        #if compiler(>=6.2)
-        if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
-            let effect = UIGlassEffect(style: .regular)
-            effect.isInteractive = true
-            let glass = UIVisualEffectView(effect: effect)
-            glass.isUserInteractionEnabled = false
-            glass.isAccessibilityElement = false
-            glass.clipsToBounds = true
-            glass.cornerConfiguration = .capsule()
-            // UISegmentedControl draws private segment backgrounds above index 0.
-            // Keep the glass above those backgrounds and put our text above it.
-            addSubview(glass)
-            glassIndicator = glass
-            indicator.isHidden = true
-            for tab in LibraryTab.allCases {
-                let label = UILabel()
-                label.text = tab.rawValue
-                label.textAlignment = .center
-                label.isUserInteractionEnabled = false
-                addSubview(label)
-                glassLabels.append(label)
-            }
-        }
-        #endif
-        layer.masksToBounds = glassIndicator == nil
-        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(trackLongPress(_:)))
-        longPress.minimumPressDuration = 0.18
-        longPress.allowableMovement = 18
-        longPress.cancelsTouchesInView = true
-        addGestureRecognizer(longPress)
-        subscription = paging.positions.sink { [weak self] value in
-            self?.position = value
-            self?.drawIndicator()
-        }
-        updateAppearance()
+        subscription = paging.positions.sink { [weak self] in self?.followPage($0) }
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-    override var intrinsicContentSize: CGSize {
-        CGSize(width: super.intrinsicContentSize.width,
-               height: max(34, UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 12))
+    func synchronizeSelection(_ index: Int) {
+        guard !handlingTouch, transition == nil, selectedSegmentIndex != index else { return }
+        selectedSegmentIndex = index
     }
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        if let glassIndicator {
-            bringSubviewToFront(glassIndicator)
-            for label in glassLabels { bringSubviewToFront(label) }
+    private func settle(at index: Int) {
+        transition?.stopAnimation(true)
+        transition = nil
+        transitionStart = nil
+        UIView.performWithoutAnimation {
+            self.selectedSegmentIndex = index
+            self.setNeedsLayout()
+            self.layoutIfNeeded()
         }
-        drawIndicator()
     }
-    override func traitCollectionDidChange(_ previous: UITraitCollection?) {
-        super.traitCollectionDidChange(previous); updateAppearance()
-    }
-    private var traditional: Bool {
-        if #available(iOS 26.0, *), !AppAppearance.forceTraditional { return false }
-        return true
-    }
-    private func updateAppearance() {
-        backgroundColor = traditional ? .tertiarySystemFill : .clear
-        let size = UIFont.preferredFont(forTextStyle: .subheadline).pointSize
-        let nativeTextColor: UIColor = traditional ? .label : .clear
-        setTitleTextAttributes([.foregroundColor: nativeTextColor, .font: UIFont.systemFont(ofSize: size, weight: .medium)], for: .normal)
-        setTitleTextAttributes([.foregroundColor: nativeTextColor, .font: UIFont.systemFont(ofSize: size, weight: .semibold)], for: .selected)
-        for (index, label) in glassLabels.enumerated() {
-            label.textColor = .label
-            label.font = UIFont.systemFont(ofSize: size, weight: index == selectedSegmentIndex ? .semibold : .medium)
+    private func followPage(_ value: CGFloat) {
+        position = value
+        guard !handlingTouch, bounds.width > 0 else { return }
+        let lower = min(numberOfSegments - 1, max(0, Int(value.rounded(.down))))
+        let fraction = value - CGFloat(lower)
+        if fraction < 0.001 || lower == numberOfSegments - 1 {
+            settle(at: Int(value.rounded()))
+            return
         }
-        let dark = traitCollection.userInterfaceStyle == .dark
-        layer.borderWidth = traditional ? 0 : 0.8
-        layer.borderColor = dark ? UIColor.white.withAlphaComponent(0.22).cgColor : UIColor.black.withAlphaComponent(0.08).cgColor
-        glassIndicator?.layer.borderWidth = dark ? 0 : 0.5
-        glassIndicator?.layer.borderColor = dark ? UIColor.white.withAlphaComponent(0.23).cgColor : UIColor.white.withAlphaComponent(0.65).cgColor
-        drawIndicator()
-    }
-    private func drawIndicator() {
-        guard numberOfSegments > 0 else { return }
-        let inset: CGFloat = 3
-        let segment = max(0, bounds.width - inset * 2) / CGFloat(numberOfSegments)
-        let height = max(0, bounds.height - inset * 2)
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        layer.cornerRadius = traditional ? 8 : bounds.height / 2
-        indicator.frame = CGRect(x: inset + position * segment, y: inset, width: segment, height: height)
-        indicator.cornerRadius = traditional ? 6 : height / 2
-        indicator.backgroundColor = (traitCollection.userInterfaceStyle == .dark ? UIColor(white: 0.36, alpha: 1) : UIColor.white).cgColor
-        indicator.shadowColor = UIColor.black.cgColor; indicator.shadowOpacity = traditional ? 0.12 : 0
-        indicator.shadowRadius = 2; indicator.shadowOffset = CGSize(width: 0, height: 1)
-        glassIndicator?.frame = indicator.frame
-        if let glassIndicator {
-            glassIndicator.layer.cornerRadius = height / 2
-            updateSelectedMaterial(active: pressing || isTracking || abs(position - position.rounded()) > 0.001)
-        }
-        for (index, label) in glassLabels.enumerated() {
-            label.frame = CGRect(x: inset + CGFloat(index) * segment, y: inset, width: segment, height: height)
-            label.font = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .subheadline).pointSize,
-                                           weight: index == Int(position.rounded()) ? .semibold : .medium)
-        }
-        CATransaction.commit()
-    }
-    private func updateSelectedMaterial(active: Bool) {
-        #if compiler(>=6.2)
-        if #available(iOS 26.0, *), let glassIndicator {
-            let useGlass = traitCollection.userInterfaceStyle != .dark || active
-            guard showingGlass != useGlass else { return }
-            showingGlass = useGlass
-            if useGlass {
-                let effect = UIGlassEffect(style: .regular)
-                effect.isInteractive = true
-                glassIndicator.effect = effect
-            } else {
-                // Glass draws a built-in rim. Keep the resting dark pill borderless,
-                // and restore interactive glass while touching or moving the pages.
-                glassIndicator.effect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        if transitionStart != lower {
+            settle(at: lower)
+            let animator = UIViewPropertyAnimator(duration: 0.3, curve: .linear) { [weak self] in
+                guard let self else { return }
+                self.selectedSegmentIndex = lower + 1
+                self.setNeedsLayout()
+                self.layoutIfNeeded()
             }
+            animator.scrubsLinearly = true
+            transitionStart = lower
+            transition = animator
+            animator.startAnimation()
+            animator.pauseAnimation()
         }
-        #endif
+        transition?.fractionComplete = fraction
+    }
+    private func fingerPosition(_ touch: UITouch) -> CGFloat {
+        let width = max(1, bounds.width) / CGFloat(numberOfSegments)
+        return min(CGFloat(numberOfSegments - 1), max(0, touch.location(in: self).x / width - 0.5))
     }
     override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
-        pressing = true
-        drawIndicator()
-        return super.beginTracking(touch, with: event)
+        touchStart = Int(position.rounded())
+        settle(at: touchStart)
+        handlingTouch = true
+        let accepted = super.beginTracking(touch, with: event)
+        if !accepted { handlingTouch = false }
+        return accepted
+    }
+    override func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+        let accepted = super.continueTracking(touch, with: event)
+        if accepted { paging.onTopDrag?(fingerPosition(touch)) }
+        return accepted
     }
     override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
         super.endTracking(touch, with: event)
-        pressing = false
-        drawIndicator()
+        let target = touch.map { Int(fingerPosition($0).rounded()) } ?? selectedSegmentIndex
+        handlingTouch = false
+        selectedSegmentIndex = target
+        paging.onTopDragEnd?(target)
+        sendActions(for: .valueChanged)
     }
     override func cancelTracking(with event: UIEvent?) {
         super.cancelTracking(with: event)
-        pressing = false
-        drawIndicator()
-    }
-    private func touchPosition(_ point: CGPoint) -> CGFloat {
-        let inset: CGFloat = 3
-        let width = max(1, bounds.width - inset * 2) / CGFloat(numberOfSegments)
-        return min(CGFloat(numberOfSegments - 1), max(0, (point.x - inset) / width - 0.5))
-    }
-    @objc private func trackLongPress(_ gesture: UILongPressGestureRecognizer) {
-        let position = touchPosition(gesture.location(in: self))
-        switch gesture.state {
-        case .began, .changed:
-            pressing = true
-            paging.onTopDrag?(position)
-        case .ended:
-            pressing = false
-            let target = min(numberOfSegments - 1, max(0, Int(position.rounded())))
-            selectedSegmentIndex = target
-            sendActions(for: .valueChanged)
-            paging.onTopDragEnd?(target)
-        case .cancelled, .failed:
-            pressing = false
-            paging.onTopDragEnd?(selectedSegmentIndex)
-        default: break
-        }
-        drawIndicator()
+        handlingTouch = false
+        settle(at: touchStart)
+        paging.onTopDragEnd?(touchStart)
     }
 }
 

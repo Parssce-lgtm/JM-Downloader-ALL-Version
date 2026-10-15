@@ -13,6 +13,8 @@ export_results() {
 }
 trap export_results EXIT
 DEVICE=${JM_SIMULATOR_ID:-$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); names=[x for k,v in d["devices"].items() if "iOS-26" in k for x in v if x["name"]=="iPhone 17 Pro Max"]; assert names,"iPhone 17 Pro Max iOS 26 simulator unavailable"; print(names[0]["udid"])')}
+xcrun simctl boot "$DEVICE" 2>/dev/null || true
+xcrun simctl bootstatus "$DEVICE" -b
 set --
 case "${JM_UI_SCOPE:-full}" in
   full|'') ;;

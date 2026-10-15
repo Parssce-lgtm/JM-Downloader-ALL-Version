@@ -199,11 +199,13 @@ actor JMAPI: ComicAPI {
             guard page == 1 else { return [] }
             return try comics([try await request("/album", query: ["id": id])])
         }
-        let rows = try await sortedSearch(value, page: page, sort: .latest)
+        let pages = try await ConcurrentLoad.map(ComicSearchQuery.variants(value), limit: 2) {
+            try await self.sortedSearch($0, page: page, sort: .latest)
+        }
+        let rows = uniqueComics(pages.flatMap { $0 })
         let verified = try await ConcurrentLoad.map(rows, limit: 6) { comic -> Comic? in
-            if ComicSearchQuery.matchesText(comic, value) { return comic }
             do {
-                let full = try await self.recommendationDetail(comic)
+                let full = try await self.searchDetail(comic)
                 return ComicSearchQuery.matchesText(full, value) ? full : nil
             } catch is RecommendationDetailUnavailable { return nil }
         }
@@ -211,38 +213,59 @@ actor JMAPI: ComicAPI {
     }
     func searchTag(_ tag: String, page: Int = 1) async throws -> [Comic] {
         guard !tag.isEmpty else { throw JMError.message("请输入 # 后面的标签。") }
-        let rows = try await sortedSearch(tag, page: page, sort: .latest, mainTag: "3")
+        let pages = try await ConcurrentLoad.map(ComicSearchQuery.variants(tag), limit: 2) {
+            try await self.sortedSearch($0, page: page, sort: .latest, mainTag: "3")
+        }
+        let rows = uniqueComics(pages.flatMap { $0 })
         let full = try await ConcurrentLoad.map(rows, limit: 6) { comic -> Comic? in
-            do { return try await self.recommendationDetail(comic) }
+            do { return try await self.searchDetail(comic) }
             catch is RecommendationDetailUnavailable { return nil }
         }
-        let matching = full.compactMap { $0 }.filter { ComicSearchQuery.hasTag($0, tag) }
-        if !matching.isEmpty || ComicSearchQuery.traditionalTag(tag) == tag { return matching }
-        let alternate = try await sortedSearch(ComicSearchQuery.traditionalTag(tag), page: page, sort: .latest, mainTag: "3")
-        let alternateFull = try await ConcurrentLoad.map(alternate, limit: 6) { comic -> Comic? in
-            do { return try await self.recommendationDetail(comic) }
-            catch is RecommendationDetailUnavailable { return nil }
-        }
-        return alternateFull.compactMap { $0 }.filter { ComicSearchQuery.hasTag($0, tag) }
+        return full.compactMap { $0 }.filter { ComicSearchQuery.hasTag($0, tag) }
     }
     func searchTags(_ tags: [String], page: Int) async throws -> [Comic] {
         guard tags.count >= 2, tags.allSatisfy({ !$0.isEmpty }) else { throw JMError.message("请输入完整标签。") }
         // The mobile API treats '+' as a literal search character. Use the
         // smallest tag result set as candidates, then verify every album tag.
         let samples = try await ConcurrentLoad.map(tags, limit: 3) { tag in
-            let primary = try await self.sortedSearchPage(tag, page: 1, sort: .latest, mainTag: "3")
-            if primary.total > 0 || ComicSearchQuery.traditionalTag(tag) == tag { return primary }
-            return try await self.sortedSearchPage(ComicSearchQuery.traditionalTag(tag), page: 1, sort: .latest, mainTag: "3")
+            let variants = try await ConcurrentLoad.map(ComicSearchQuery.variants(tag), limit: 2) {
+                try await self.sortedSearchPage($0, page: 1, sort: .latest, mainTag: "3")
+            }
+            return variants.max(by: { $0.total < $1.total })!
         }
         guard let chosen = samples.min(by: { $0.total < $1.total }), chosen.total > 0 else { return [] }
-        let rows: [Comic]
-        if page == 1 { rows = chosen.comics }
-        else { rows = try await sortedSearchPage(chosen.query, page: page, sort: .latest, mainTag: "3").comics }
+        // One visible batch consumes three consecutive server pages. An empty
+        // intersection on the first server page must not hide later matches.
+        let pageSize = max(1, chosen.comics.count)
+        let pageCount = max(1, (chosen.total + pageSize - 1) / pageSize)
+        let start = (max(1, page) - 1) * 3 + 1
+        guard start <= pageCount else { return [] }
+        let pages = try await ConcurrentLoad.map(Array(start...min(pageCount, start + 2)), limit: 3) { index in
+            if index == 1 { return chosen.comics }
+            return try await self.sortedSearchPage(chosen.query, page: index, sort: .latest, mainTag: "3").comics
+        }
+        let rows = uniqueComics(pages.flatMap { $0 })
         let full = try await ConcurrentLoad.map(rows, limit: 6) { comic -> Comic? in
-            do { return try await self.recommendationDetail(comic) }
+            do { return try await self.searchDetail(comic) }
             catch is RecommendationDetailUnavailable { return nil }
         }
         return full.compactMap { $0 }.filter { comic in tags.allSatisfy { ComicSearchQuery.hasTag(comic, $0) } }
+    }
+    private func uniqueComics(_ comics: [Comic]) -> [Comic] {
+        var seen = Set<String>()
+        return comics.filter { seen.insert($0.id).inserted }
+    }
+    private func searchDetail(_ comic: Comic) async throws -> Comic {
+        let data = try await request("/album", query: ["id": try Validation.numericID(comic.id)])
+        guard let tags = data["tags"] as? [String] else { throw RecommendationDetailUnavailable() }
+        let returnedID = text(data["id"])
+        guard returnedID.isEmpty || returnedID == comic.id else { throw RecommendationDetailUnavailable() }
+        var full = comic
+        let name = text(data["name"])
+        if !name.isEmpty { full.title = name }
+        full.tags = tags; full.tagsVerified = true
+        await tagCache.store(tags, for: full)
+        return full
     }
     private struct SearchPage: Sendable {
         let query: String

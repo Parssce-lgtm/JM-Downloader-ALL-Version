@@ -63,7 +63,7 @@ struct ContentView: View {
             Spacer(minLength: 0)
             Button { settings = true } label: {
                 Image(systemName: "gearshape").font(.system(size: 18))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 28, height: 28)
             }.modifier(HeaderActionStyle())
                 .accessibilityLabel("设置").accessibilityIdentifier("settings")
         }.frame(minHeight: 48)
@@ -184,7 +184,7 @@ private struct LibraryModuleView: View {
             (globalSearch || tab != .recommendations || (!store.isBlocked(comic) && (!excluded.contains(DownloadCatalog.key(comic)) || store.isPendingDislike(comic))))
                 && (tab == .favorites && !globalSearch
                     ? pageState.favoriteVisibility.includes(downloaded: downloaded.contains(DownloadCatalog.key(comic)), hidden: store.isHiddenFavorite(comic))
-                    : ((tab == .favorites ? showDownloadedFavorites : showDownloadedRecommendations) || !downloaded.contains(DownloadCatalog.key(comic))))
+                    : (globalSearch || (tab == .favorites ? showDownloadedFavorites : showDownloadedRecommendations) || !downloaded.contains(DownloadCatalog.key(comic))))
                 && (folder == "全部收藏夹" || comic.folders.contains(folder) || tab == .recommendations || globalSearch)
         }
     }
@@ -663,7 +663,8 @@ private struct HeaderActionStyle: ViewModifier {
     func body(content: Content) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
-            content.buttonStyle(.plain).glassEffect(.regular.interactive(), in: Circle())
+            content.buttonStyle(.glass).buttonBorderShape(.circle).controlSize(.regular)
+                .frame(width: 44, height: 44)
         } else { traditional(content) }
         #else
         traditional(content)
@@ -708,7 +709,7 @@ private struct ComicCardStyle: ViewModifier {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(message(for: tab))
             .modifier(NoticeAccessibility(interactive: tab == .downloads, onLogs: onLogs))
-            .modifier(NoticeCapsuleStyle(interactive: tab == .downloads))
+            .modifier(NoticeCapsuleStyle(interactive: tab == .downloads, transparent: tab != .downloads))
             .accessibilityIdentifier("sharedNoticeCapsule")
             .onReceive(paging.positions) { position = $0 }
     }
@@ -761,10 +762,11 @@ private struct NoticeAccessibility: ViewModifier {
 
 private struct NoticeCapsuleStyle: ViewModifier {
     var interactive = false
+    var transparent = false
     func body(content: Content) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *), !AppAppearance.forceTraditional {
-            content.glassEffect(.clear.interactive(interactive), in: Capsule())
+            content.glassEffect(transparent ? .clear : .regular.interactive(interactive), in: Capsule())
                 .contentShape(.accessibility, Rectangle())
         } else {
             traditional(content)
@@ -774,7 +776,7 @@ private struct NoticeCapsuleStyle: ViewModifier {
         #endif
     }
     private func traditional(_ content: Content) -> some View {
-        content.background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.85), in: Capsule())
+        content.background(Color(uiColor: .secondarySystemGroupedBackground).opacity(transparent ? 0.85 : 1), in: Capsule())
             .overlay { Capsule().strokeBorder(Color.primary.opacity(0.16), lineWidth: 1).allowsHitTesting(false) }
     }
 }
