@@ -35,6 +35,17 @@ private enum PDFSort: String, CaseIterable {
 }
 
 private enum LocalPDFLoader {
+    static func identities() async -> [Comic] {
+        await Task.detached(priority: .utility) {
+            let files = (try? FileManager.default.contentsOfDirectory(at: DiskStore.documents, includingPropertiesForKeys: nil)) ?? []
+            return files.compactMap { url -> Comic? in
+                guard url.pathExtension.lowercased() == "pdf", let key = DownloadCatalog.key(filename: url.lastPathComponent) else { return nil }
+                let parts = key.split(separator: ":", maxSplits: 1).map(String.init)
+                guard parts.count == 2, let platform = ComicPlatform(rawValue: parts[0]) else { return nil }
+                return Comic(id: parts[1], title: url.deletingPathExtension().lastPathComponent, platform: platform)
+            }
+        }.value
+    }
     static func scan(comics: [Comic]) async throws -> [LocalPDF] {
         try await Task.detached(priority: .userInitiated) {
             let files = try FileManager.default.contentsOfDirectory(at: DiskStore.documents,
@@ -174,10 +185,11 @@ struct PDFLibraryView: View {
         guard !loading else { return }
         loading = true; failure = nil
         defer { loading = false }
+        let identities = await LocalPDFLoader.identities()
         var comics = store.jobs.map(\.comic)
         for (account, library) in store.libraries {
             let known = library.favorites + library.excluded + (library.hiddenComics ?? [])
-            comics += await ComicTagCache.persistent(account: account).restoring(known)
+            comics += await ComicTagCache.persistent(account: account).restoring(known + identities)
         }
         do { files = try await LocalPDFLoader.scan(comics: comics) }
         catch { failure = error.localizedDescription }

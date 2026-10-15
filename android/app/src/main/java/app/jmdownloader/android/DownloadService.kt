@@ -55,7 +55,9 @@ class DownloadService: Service() {
         val id=initial.id;val work=File(filesDir,"downloads/$id").apply{mkdirs()};val p=store.state.value.settings
         try{
             val api=store.api(initial.owner,p);store.updateJob(id){it.copy(phase=Phase.PREPARING,error="")}
-            val pages=initial.pages.ifEmpty{api.manifest(initial.comic)}
+            val comic=if(initial.comic.verified)initial.comic else api.detail(initial.comic).also{store.cache(initial.owner,it)}
+            store.updateJob(id){it.copy(comic=comic)}
+            val pages=initial.pages.ifEmpty{api.manifest(comic)}
             // Reconcile disk and checkpoint after an interrupted write before resuming.
             val done=pages.indices.filter{n->val o=BitmapFactory.Options().apply{inJustDecodeBounds=true};BitmapFactory.decodeFile(File(work,"$n.img").path,o);o.outWidth>0&&o.outHeight>0}.toSet()
             store.updateJob(id){it.copy(phase=Phase.DOWNLOADING,pages=pages,done=done,rendered=0)}
@@ -77,18 +79,18 @@ class DownloadService: Service() {
             currentCoroutineContext().ensureActive();store.updateJob(id){it.copy(phase=Phase.EXPORTING,rendered=0)}
             val part=File(store.pdfRoot,".${id}.part");val metadata=File(store.pdfRoot,".${id}.meta.part")
             try {
-                assemblePDF(work,initial.comic,pages,metadata){n->store.updateJob(id){it.copy(rendered=n)}}
+                assemblePDF(work,comic,pages,metadata){n->store.updateJob(id){it.copy(rendered=n)}}
                 currentCoroutineContext().ensureActive()
                 ParcelFileDescriptor.open(metadata,ParcelFileDescriptor.MODE_READ_ONLY).use{fd->PdfRenderer(fd).use{require(it.pageCount==pages.size){"PDF 页数校验失败"}}}
                 currentCoroutineContext().ensureActive()
-                val stem="${initial.comic.platform.name}-${initial.comic.id}-${ProtocolCrypto.safeName(initial.comic.title)}"
+                val stem="${comic.platform.name}-${comic.id}-${ProtocolCrypto.safeName(comic.title)}"
                 var target=File(store.pdfRoot,"$stem.pdf");var suffix=1
                 while(target.exists())target=File(store.pdfRoot,"$stem (${suffix++}).pdf")
                 require(metadata.renameTo(target)){"PDF 保存失败"};val name=target.name
                 store.updateJob(id){it.copy(phase=Phase.COMPLETED,rendered=pages.size,output=target.path)};store.feedback(Section.DOWNLOADS,Feedback("${initial.comic.title} · PDF 已保存",100));store.log("PDF 已保存：$name")
                 work.deleteRecursively()
             }finally{part.delete();metadata.delete()}
-        }catch(e:CancellationException){store.updateJob(id){if(it.phase!=Phase.COMPLETED)it.copy(phase=Phase.PAUSED)else it};throw e}catch(e:Exception){store.updateJob(id){it.copy(phase=Phase.FAILED,error=e.message?:"下载失败")};store.error(Section.DOWNLOADS,e)}
+        }catch(e:CancellationException){store.updateJob(id){if(it.phase in setOf(Phase.DOWNLOADING,Phase.EXPORTING,Phase.PREPARING))it.copy(phase=Phase.PAUSED)else it};throw e}catch(e:Exception){store.updateJob(id){it.copy(phase=Phase.FAILED,error=e.message?:"下载失败")};store.error(Section.DOWNLOADS,e)}
     }
 }
 fun decodePage(file: File,page: Page,platform: Platform): Bitmap {
