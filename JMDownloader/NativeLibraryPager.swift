@@ -45,14 +45,13 @@ struct NativeLibraryTabs: UIViewRepresentable {
 /// UIControl tracking also accepts a gesture that begins over an unselected tab.
 final class TrackingLibraryTabs: UISegmentedControl {
     private let indicator = CALayer()
-    private let glassMaskView = UIView()
     private var glassIndicator: UIVisualEffectView?
     private var glassLabels: [UILabel] = []
     private var subscription: AnyCancellable?
     private let paging: LibraryPagingPosition
     private var position: CGFloat = 1
-    private var glassMaskSize: CGSize = .zero
-    private var glassMaskDark = false
+    private var pressing = false
+    private var showingGlass: Bool?
     var indicatorFrame: CGRect { indicator.frame }
 
     init(paging: LibraryPagingPosition) {
@@ -81,7 +80,6 @@ final class TrackingLibraryTabs: UISegmentedControl {
             glass.isAccessibilityElement = false
             glass.clipsToBounds = true
             glass.cornerConfiguration = .capsule()
-            glassMaskView.backgroundColor = .black
             // UISegmentedControl draws private segment backgrounds above index 0.
             // Keep the glass above those backgrounds and put our text above it.
             addSubview(glass)
@@ -160,19 +158,8 @@ final class TrackingLibraryTabs: UISegmentedControl {
         indicator.shadowRadius = 2; indicator.shadowOffset = CGSize(width: 0, height: 1)
         glassIndicator?.frame = indicator.frame
         if let glassIndicator {
-            let dark = traitCollection.userInterfaceStyle == .dark
-            let bounds = glassIndicator.bounds
-            if glassMaskSize != bounds.size || glassMaskDark != dark {
-                glassMaskSize = bounds.size
-                glassMaskDark = dark
-                let edgeInset: CGFloat = dark ? 2 : 0
-                glassMaskView.frame = bounds.insetBy(dx: edgeInset, dy: edgeInset)
-                glassMaskView.layer.cornerRadius = max(0, (bounds.height - edgeInset * 2) / 2)
-                // UIVisualEffectView copies UIView masks into its effect layers.
-                // Reassign after resizing so the system updates every copy.
-                glassIndicator.mask = nil
-                glassIndicator.mask = glassMaskView
-            }
+            glassIndicator.layer.cornerRadius = height / 2
+            updateSelectedMaterial(active: pressing || isTracking || abs(position - position.rounded()) > 0.001)
         }
         for (index, label) in glassLabels.enumerated() {
             label.frame = CGRect(x: inset + CGFloat(index) * segment, y: inset, width: segment, height: height)
@@ -180,6 +167,39 @@ final class TrackingLibraryTabs: UISegmentedControl {
                                            weight: index == Int(position.rounded()) ? .semibold : .medium)
         }
         CATransaction.commit()
+    }
+    private func updateSelectedMaterial(active: Bool) {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *), let glassIndicator {
+            let useGlass = traitCollection.userInterfaceStyle != .dark || active
+            guard showingGlass != useGlass else { return }
+            showingGlass = useGlass
+            if useGlass {
+                let effect = UIGlassEffect(style: .regular)
+                effect.isInteractive = true
+                glassIndicator.effect = effect
+            } else {
+                // Glass draws a built-in rim. Keep the resting dark pill borderless,
+                // and restore interactive glass while touching or moving the pages.
+                glassIndicator.effect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+            }
+        }
+        #endif
+    }
+    override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+        pressing = true
+        drawIndicator()
+        return super.beginTracking(touch, with: event)
+    }
+    override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
+        super.endTracking(touch, with: event)
+        pressing = false
+        drawIndicator()
+    }
+    override func cancelTracking(with event: UIEvent?) {
+        super.cancelTracking(with: event)
+        pressing = false
+        drawIndicator()
     }
     private func touchPosition(_ point: CGPoint) -> CGFloat {
         let inset: CGFloat = 3
@@ -190,16 +210,20 @@ final class TrackingLibraryTabs: UISegmentedControl {
         let position = touchPosition(gesture.location(in: self))
         switch gesture.state {
         case .began, .changed:
+            pressing = true
             paging.onTopDrag?(position)
         case .ended:
+            pressing = false
             let target = min(numberOfSegments - 1, max(0, Int(position.rounded())))
             selectedSegmentIndex = target
             sendActions(for: .valueChanged)
             paging.onTopDragEnd?(target)
         case .cancelled, .failed:
+            pressing = false
             paging.onTopDragEnd?(selectedSegmentIndex)
         default: break
         }
+        drawIndicator()
     }
 }
 
