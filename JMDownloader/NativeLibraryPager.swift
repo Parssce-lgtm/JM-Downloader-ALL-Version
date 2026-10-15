@@ -45,7 +45,7 @@ struct NativeLibraryTabs: UIViewRepresentable {
 /// UIControl tracking also accepts a gesture that begins over an unselected tab.
 final class TrackingLibraryTabs: UISegmentedControl {
     private let indicator = CALayer()
-    private let glassMask = CAShapeLayer()
+    private let glassMaskView = UIView()
     private var glassIndicator: UIVisualEffectView?
     private var glassLabels: [UILabel] = []
     private var subscription: AnyCancellable?
@@ -81,8 +81,7 @@ final class TrackingLibraryTabs: UISegmentedControl {
             glass.isAccessibilityElement = false
             glass.clipsToBounds = true
             glass.cornerConfiguration = .capsule()
-            glassMask.fillColor = UIColor.black.cgColor
-            glass.layer.mask = glassMask
+            glassMaskView.backgroundColor = .black
             // UISegmentedControl draws private segment backgrounds above index 0.
             // Keep the glass above those backgrounds and put our text above it.
             addSubview(glass)
@@ -118,11 +117,6 @@ final class TrackingLibraryTabs: UISegmentedControl {
     override func layoutSubviews() {
         super.layoutSubviews()
         if let glassIndicator {
-            // UIKit keeps its own selected-segment outline even with clear images.
-            // Hide only its rendering layers; leave the segment views hit-testable.
-            for nativeSubview in subviews where nativeSubview !== glassIndicator && !glassLabels.contains(where: { $0 === nativeSubview }) {
-                nativeSubview.layer.opacity = 0
-            }
             bringSubviewToFront(glassIndicator)
             for label in glassLabels { bringSubviewToFront(label) }
         }
@@ -172,11 +166,12 @@ final class TrackingLibraryTabs: UISegmentedControl {
                 glassMaskSize = bounds.size
                 glassMaskDark = dark
                 let edgeInset: CGFloat = dark ? 2 : 0
-                glassMask.frame = bounds
-                glassMask.path = UIBezierPath(
-                    roundedRect: bounds.insetBy(dx: edgeInset, dy: edgeInset),
-                    cornerRadius: max(0, (bounds.height - edgeInset * 2) / 2)
-                ).cgPath
+                glassMaskView.frame = bounds.insetBy(dx: edgeInset, dy: edgeInset)
+                glassMaskView.layer.cornerRadius = max(0, (bounds.height - edgeInset * 2) / 2)
+                // UIVisualEffectView copies UIView masks into its effect layers.
+                // Reassign after resizing so the system updates every copy.
+                glassIndicator.mask = nil
+                glassIndicator.mask = glassMaskView
             }
         }
         for (index, label) in glassLabels.enumerated() {

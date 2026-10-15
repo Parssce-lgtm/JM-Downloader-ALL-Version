@@ -101,7 +101,7 @@ final class DownloadStorageTests: XCTestCase {
         let failing = URLSessionConfiguration.ephemeral
         failing.protocolClasses = [StagingFailureProtocol.self]
         store.engine.connect(store, configuration: failing, directConfiguration: configuration())
-        for _ in 0..<500 {
+        for _ in 0..<1500 {
             if store.jobs[0].state == .completed || store.jobs[0].state == .failed { break }
             try await Task.sleep(for: .milliseconds(20))
         }

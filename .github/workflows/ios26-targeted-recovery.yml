@@ -35,7 +35,7 @@ jobs:
           IFS=',' read -r -a SELECTED <<< "$JM_RECHECK_TESTS"
           TEST_FLAGS=()
           for CASE in "${SELECTED[@]}"; do
-            [[ "$CASE" =~ ^JMDownloaderUITests/[A-Za-z0-9_]+/[A-Za-z0-9_]+$ ]]
+            [[ "$CASE" =~ ^JMDownloader(UI)?Tests/[A-Za-z0-9_]+/[A-Za-z0-9_]+$ ]]
             TEST_FLAGS+=("-only-testing:$CASE")
           done
           [[ ${#TEST_FLAGS[@]} -gt 0 ]]
