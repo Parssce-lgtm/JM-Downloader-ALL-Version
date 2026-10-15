@@ -44,7 +44,7 @@ final class CompatibilityUITests: XCTestCase {
         }
         app.buttons["settings"].tap()
         XCTAssertTrue(app.navigationBars["设置"].waitForExistence(timeout: 5))
-        let version = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "1.8.0 (Build 24)")).firstMatch
+        let version = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "1.8.0 (Build 25)")).firstMatch
         for _ in 0..<3 where !version.exists { app.swipeUp() }
         XCTAssertTrue(version.waitForExistence(timeout: 5))
         for _ in 0..<3 where !app.buttons["comicSettings"].isHittable { app.swipeDown() }

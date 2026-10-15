@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var settings = false
     @State private var logHistory = false
     @State private var tab: LibraryTab = .favorites
+    @State private var lastNoticeTab: LibraryTab = .favorites
     @State private var bottomInset: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pageStates = Dictionary(uniqueKeysWithValues: LibraryTab.allCases.map { ($0, LibraryPageState()) })
@@ -37,12 +38,14 @@ struct ContentView: View {
             }.frame(maxWidth: layout.contentWidth).frame(maxWidth: .infinity)
                 .background(Color(uiColor: .systemGroupedBackground))
                 .overlay(alignment: .bottom) {
-                    if tab != .preview {
-                    SharedLibraryNotice(store: store, favorites: pageStates[.favorites]!, recommendations: pageStates[.recommendations]!, tab: tab, onLogs: { logHistory = true })
+                    SharedLibraryNotice(store: store, favorites: pageStates[.favorites]!, recommendations: pageStates[.recommendations]!, tab: tab == .preview ? lastNoticeTab : tab, onLogs: { logHistory = true })
                         .padding(.horizontal, layout.noticeInset(bottomSafeArea: bottomInset))
                         .frame(maxWidth: layout.contentWidth)
                         .padding(.bottom, layout.noticeInset(bottomSafeArea: bottomInset))
-                    }
+                        .opacity(tab == .preview ? 0 : 1)
+                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: tab == .preview)
+                        .allowsHitTesting(tab != .preview)
+                        .accessibilityHidden(tab == .preview)
                 }
                 .ignoresSafeArea(.container, edges: .bottom)
             }
@@ -64,6 +67,7 @@ struct ContentView: View {
             .navigationDestination(isPresented: $logHistory) { LogHistoryView(store: store) }
             .onChangeCompat(of: store.account) { _, _ in resetPages() }
             .onChangeCompat(of: store.platform) { _, _ in resetPages() }
+            .onChangeCompat(of: tab) { _, page in if page != .preview { lastNoticeTab = page } }
             .onChangeCompat(of: store.preferences.previewEnabled) { _, enabled in if enabled != true && tab == .preview { tab = .favorites } }
             .alert("提示", isPresented: Binding(get: { store.alert != nil && !settings }, set: { if !$0 && !settings { store.alert = nil } })) {
                 Button("好") { store.alert = nil }
@@ -692,12 +696,12 @@ private struct ComicCardStyle: ViewModifier {
         }.foregroundStyle(.primary).frame(maxWidth: .infinity).frame(height: 66)
             .contentShape(Capsule())
             .onTapGesture { if tab == .downloads { onLogs() } }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(message(for: tab))
-            .modifier(NoticeAccessibility(interactive: tab == .downloads, onLogs: onLogs))
-            .modifier(NoticeCapsuleStyle(interactive: tab == .downloads, transparent: tab != .downloads))
+            .modifier(NoticeCapsuleStyle(transparent: true))
+            .accessibilityRepresentation {
+                if tab == .downloads { Button(message(for: tab), action: onLogs) }
+                else { Text(message(for: tab)) }
+            }
             .accessibilityIdentifier("sharedNoticeCapsule")
-            .animation(reduceMotion ? nil : .default, value: tab)
     }
     private func noticeText(_ page: LibraryTab) -> some View {
         Text(message(for: page))
@@ -707,6 +711,7 @@ private struct ComicCardStyle: ViewModifier {
             .monospacedDigit()
             .multilineTextAlignment(.center).lineLimit(2)
             .opacity(tab == page ? 1 : 0)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: tab)
     }
     private var noticeIcons: some View {
         HStack {
@@ -714,6 +719,7 @@ private struct ComicCardStyle: ViewModifier {
             Spacer()
             Image(systemName: "chevron.right").font(.caption2)
                 .opacity(tab == .downloads ? 1 : 0)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: tab == .downloads)
         }.padding(.horizontal, 22)
     }
     private func message(for page: LibraryTab) -> String {
@@ -726,18 +732,6 @@ private struct ComicCardStyle: ViewModifier {
         let busy = store.signingIn || (state.globalSearch ? search.searching : (page == .favorites ? store.refreshing : (store.recommending || store.refreshing)))
         return failure.map { (kind == .network ? "网络已断开 · " : "加载失败 · ") + $0 }
             ?? (busy ? progress.text : (progress.fraction == 1 ? progress.stage : "准备就绪"))
-    }
-}
-
-private struct NoticeAccessibility: ViewModifier {
-    let interactive: Bool
-    let onLogs: () -> Void
-    func body(content: Content) -> some View {
-        if interactive {
-            content.accessibilityAddTraits(.isButton).accessibilityAction { onLogs() }
-        } else {
-            content.accessibilityRemoveTraits(.isButton)
-        }
     }
 }
 

@@ -31,7 +31,7 @@ struct SettingsView: View {
                         .accessibilityIdentifier("developerSettings")
                 }
                 Section("关于") {
-                    LabeledContent("版本", value: "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.8.0") (Build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "24"))")
+                    LabeledContent("版本", value: "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.8.0") (Build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "25"))")
                     LabeledContent("系统", value: AppAppearance.systemDescription)
                     NavigationLink("第三方许可") {
                         ScrollView {

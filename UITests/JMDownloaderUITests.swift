@@ -253,6 +253,50 @@ final class JMDownloaderUITests: XCTestCase {
         }
     }
 
+    @MainActor func testSharedNoticeStaysFixedAndFadesOutForPDFPreview() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-fixture-v120", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launch()
+        let tabs = app.segmentedControls["libraryTabs"]
+        XCTAssertTrue(tabs.waitForExistence(timeout: 10))
+        app.buttons["settings"].tap()
+        let developer = app.buttons["developerSettings"]
+        for _ in 0..<4 where !developer.isHittable { app.swipeUp() }
+        XCTAssertTrue(developer.waitForExistence(timeout: 5))
+        developer.tap()
+        let preview = app.switches["enablePDFPreview"]
+        XCTAssertTrue(preview.waitForExistence(timeout: 5))
+        if preview.value as? String != "1" { preview.tap() }
+        app.navigationBars["开发者功能"].buttons.firstMatch.tap()
+        app.buttons["完成"].tap()
+        XCTAssertTrue(tabs.buttons["PDF 预览"].waitForExistence(timeout: 5))
+        tabs.buttons["下载任务"].tap()
+        let notice = app.descendants(matching: .any)["sharedNoticeCapsule"].firstMatch
+        XCTAssertTrue(notice.waitForExistence(timeout: 5))
+        let frame = notice.frame
+        let downloadMessage = notice.label
+        tabs.buttons["漫画收藏"].tap()
+        XCTAssertTrue(notice.waitForExistence(timeout: 5))
+        XCTAssertEqual(notice.frame, frame)
+        XCTAssertFalse(app.buttons["sharedNoticeCapsule"].exists)
+        tabs.buttons["下载任务"].tap()
+        XCTAssertTrue(app.buttons["sharedNoticeCapsule"].waitForExistence(timeout: 5))
+        XCTAssertEqual(notice.frame, frame)
+        let pager = app.descendants(matching: .any)["libraryPager"].firstMatch
+        pager.swipeRight()
+        XCTAssertTrue(tabs.buttons["PDF 预览"].isSelected)
+        XCTAssertTrue(notice.waitForDisappearance(timeout: 5))
+        attach(app, name: "pdf-preview-notice-hidden")
+        pager.swipeLeft()
+        XCTAssertTrue(tabs.buttons["下载任务"].isSelected)
+        XCTAssertTrue(app.buttons["sharedNoticeCapsule"].waitForExistence(timeout: 5))
+        XCTAssertEqual(notice.frame, frame)
+        XCTAssertEqual(notice.label, downloadMessage)
+        attach(app, name: "pdf-return-notice-restored")
+        notice.tap()
+        XCTAssertTrue(app.navigationBars["提示记录"].waitForExistence(timeout: 5))
+    }
+
     @MainActor func testFavoritesUseLoadingIconAndReadOnlyProgressNotice() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "--favorite-loading-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
