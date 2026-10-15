@@ -266,7 +266,11 @@ final class JMDownloaderUITests: XCTestCase {
         developer.tap()
         let preview = app.switches["enablePDFPreview"]
         XCTAssertTrue(preview.waitForExistence(timeout: 5))
-        if preview.value as? String != "1" { preview.tap() }
+        if preview.value as? String != "1" {
+            preview.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
+        }
+        XCTAssertTrue(NSPredicate(format: "value == %@", "1").evaluate(with: preview), "PDF preview switch did not turn on: \(preview.debugDescription)")
+        attach(app, name: "pdf-preview-setting-enabled")
         app.navigationBars["开发者功能"].buttons.firstMatch.tap()
         app.buttons["完成"].tap()
         XCTAssertTrue(tabs.buttons["PDF 预览"].waitForExistence(timeout: 5))
