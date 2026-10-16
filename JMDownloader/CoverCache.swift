@@ -1,16 +1,19 @@
 import Foundation
 import UIKit
 import CryptoKit
+import ImageIO
 
 actor CoverCache {
     static let shared = CoverCache()
     private let directory: URL
     private var memory = NSCache<NSString, NSData>()
+    private var thumbnails = NSCache<NSString, UIImage>()
     private var requests: [String: Task<Data, Error>] = [:]
     private var generation = UUID()
     init(directory: URL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("JMDownloaderCovers")) {
         self.directory = directory
         memory.totalCostLimit = 32 * 1024 * 1024
+        thumbnails.totalCostLimit = 24 * 1024 * 1024
     }
     private func file(_ key: String) -> URL {
         let hash = SHA256.hash(data: Data(key.utf8)).map { String(format: "%02x", $0) }.joined()
@@ -24,6 +27,7 @@ actor CoverCache {
     }
     func insert(_ data: Data, key: String) throws {
         guard UIImage(data: data) != nil else { throw JMError.message("封面格式无效。") }
+        thumbnails.removeObject(forKey: key as NSString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try data.write(to: file(key), options: .atomic)
         memory.setObject(data as NSData, forKey: key as NSString, cost: data.count)
@@ -77,9 +81,32 @@ actor CoverCache {
         if stamp == generation { try insert(data, key: key) }
         return data
     }
+    // Decode and downsample on this actor, before handing an image to SwiftUI.
+    // Re-entering an adjacent page can reuse ready-to-display pixels, rather than
+    // decoding the same full-resolution JPEG on the rendering thread again.
+    func thumbnail(comic: Comic, preferences: Preferences) async throws -> UIImage {
+        let key = DownloadCatalog.key(comic) as NSString
+        if let image = thumbnails.object(forKey: key) { return image }
+        let stamp = generation
+        let data = try await load(comic: comic, preferences: preferences)
+        try Task.checkCancellation()
+        guard stamp == generation else { throw CancellationError() }
+        if let image = thumbnails.object(forKey: key) { return image }
+        guard let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
+              let decoded = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: 320,
+                kCGImageSourceShouldCacheImmediately: true
+              ] as CFDictionary) else { throw URLError(.cannotDecodeContentData) }
+        let image = UIImage(cgImage: decoded)
+        thumbnails.setObject(image, forKey: key, cost: decoded.bytesPerRow * decoded.height)
+        return image
+    }
+
     func clear() throws {
         generation = UUID()
-        requests.values.forEach { $0.cancel() }; requests.removeAll(); memory.removeAllObjects()
+        requests.values.forEach { $0.cancel() }; requests.removeAll(); memory.removeAllObjects(); thumbnails.removeAllObjects()
         if FileManager.default.fileExists(atPath: directory.path) { try FileManager.default.removeItem(at: directory) }
     }
     func size() -> Int64 {

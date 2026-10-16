@@ -197,7 +197,7 @@ final class JMDownloaderUITests: XCTestCase {
     }
     @MainActor func testNativePagingCancelsShortDragAndKeepsOnlyCurrentPageAccessible() {
         let app = XCUIApplication()
-        app.launchArguments = ["--ui-fixture-v120", "--long-library-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launchArguments = ["--ui-fixture-v120", "--long-library-fixture", "--progress-stress-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
         let tabs = app.segmentedControls["libraryTabs"]
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))

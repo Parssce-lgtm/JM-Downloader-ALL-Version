@@ -11,9 +11,7 @@ struct ContentView: View {
     @State private var settings = false
     @State private var logHistory = false
     @State private var tab: LibraryTab = .favorites
-    @State private var lastNoticeTab: LibraryTab = .favorites
     @State private var bottomInset: CGFloat = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pageStates = Dictionary(uniqueKeysWithValues: LibraryTab.allCases.map { ($0, LibraryPageState()) })
     private var visibleTabs: [LibraryTab] { LibraryTab.allCases.filter { $0 != .preview || store.preferences.previewEnabled == true } }
     var body: some View {
@@ -38,14 +36,10 @@ struct ContentView: View {
             }.frame(maxWidth: layout.contentWidth).frame(maxWidth: .infinity)
                 .background(Color(uiColor: .systemGroupedBackground))
                 .overlay(alignment: .bottom) {
-                    SharedLibraryNotice(store: store, favorites: pageStates[.favorites]!, recommendations: pageStates[.recommendations]!, tab: tab == .preview ? lastNoticeTab : tab, isVisible: tab != .preview, onLogs: { logHistory = true })
+                    FloatingLibraryNotice(store: store, favorites: pageStates[.favorites]!, recommendations: pageStates[.recommendations]!, tab: tab, onLogs: { logHistory = true })
                         .padding(.horizontal, layout.noticeInset(bottomSafeArea: bottomInset))
                         .frame(maxWidth: layout.contentWidth)
                         .padding(.bottom, layout.noticeInset(bottomSafeArea: bottomInset))
-                        .opacity(tab == .preview ? 0 : 1)
-                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: tab == .preview)
-                        .allowsHitTesting(tab != .preview)
-                        .accessibilityHidden(tab == .preview)
                 }
                 .ignoresSafeArea(.container, edges: .bottom)
             }
@@ -69,7 +63,6 @@ struct ContentView: View {
             .navigationDestination(isPresented: $logHistory) { LogHistoryView(store: store) }
             .onChangeCompat(of: store.account) { _, _ in resetPages() }
             .onChangeCompat(of: store.platform) { _, _ in resetPages() }
-            .onChangeCompat(of: tab) { _, page in if page != .preview { lastNoticeTab = page } }
             .onChangeCompat(of: store.preferences.previewEnabled) { _, enabled in if enabled != true && tab == .preview { tab = .favorites } }
             .alert("提示", isPresented: Binding(get: { store.alert != nil && !settings }, set: { if !$0 && !settings { store.alert = nil } })) {
                 Button("好") { store.alert = nil }
@@ -110,6 +103,7 @@ private struct WindowBottomInsetReader: UIViewRepresentable {
 
 @MainActor
 private final class LibraryPageState: ObservableObject {
+    let comicFilter = LibraryComicFilterCache()
     @Published var folder: String = "全部收藏夹"
     @Published var query: String = ""
     @Published var submittedQuery: String = ""
@@ -190,15 +184,15 @@ private struct LibraryModuleView: View {
     private var searchState: ComicSearchState { store.searchState(searchScope) }
     private var source: [Comic] { globalSearch ? searchState.results : (tab == .favorites ? store.favorites : store.recommendations) }
     private var comics: [Comic] {
-        let downloaded = store.downloadedComicKeys
-        let excluded = Set(store.excluded.map(DownloadCatalog.key))
-        return source.filter { comic in
-            (globalSearch || tab != .recommendations || (!store.isBlocked(comic) && (!excluded.contains(DownloadCatalog.key(comic)) || store.isPendingDislike(comic))))
-                && (tab == .favorites && !globalSearch
-                    ? pageState.favoriteVisibility.includes(downloaded: downloaded.contains(DownloadCatalog.key(comic)), hidden: store.isHiddenFavorite(comic))
-                    : (globalSearch || (tab == .favorites ? showDownloadedFavorites : showDownloadedRecommendations) || !downloaded.contains(DownloadCatalog.key(comic))))
-                && (folder == "全部收藏夹" || comic.folders.contains(folder) || tab == .recommendations || globalSearch)
-        }
+        pageState.comicFilter.value(for: LibraryComicFilter(
+            comics: source, recommendations: tab == .recommendations, isSearch: globalSearch,
+            downloaded: store.downloadedComicKeys,
+            excluded: Set(store.excluded.map(DownloadCatalog.key)),
+            pendingDislikes: Set(store.pendingDislikedComics.map(DownloadCatalog.key)),
+            hidden: store.libraries[store.account]?.hiddenComicKeys ?? [],
+            tagBlacklist: store.tagBlacklist, titleBlacklist: store.titleBlacklist,
+            visibility: pageState.favoriteVisibility,
+            showDownloaded: showDownloadedRecommendations, folder: folder))
     }
     private var selectionItems: [Comic] { tab == .downloads ? tasks.map(\.comic) : comics }
     private var catalog: [Comic] {
@@ -232,7 +226,19 @@ private struct LibraryModuleView: View {
             .onChangeCompat(of: store.account) { _, _ in resetPage() }
     }
     private func resetPage() { showDownloadedFavorites = false; showDownloadedRecommendations = false; showHiddenFavorites = false; endSelection(); folder = "全部收藏夹"; exitSearch() }
-    private func dismissTransientControls() { showSearch = false; searchFocused = false; endSelection() }
+    private func dismissTransientControls() {
+        // A native page transition already animates. Do not start a second spring
+        // or publish unchanged selection values every time a page becomes inactive.
+        guard showSearch || searchFocused || mode != .none || !selected.isEmpty else { return }
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            if showSearch { showSearch = false }
+            if searchFocused { searchFocused = false }
+            if mode != .none { mode = .none }
+            if !selected.isEmpty { selected = [] }
+        }
+    }
     private func refreshCurrentList() {
         if globalSearch { store.search(submittedQuery, scope: searchScope) }
         else if tab == .favorites { store.refreshFavorites() }
@@ -274,15 +280,21 @@ private struct LibraryModuleView: View {
         }
     }
     private var libraryPane: some View {
-        VStack(spacing: 0) {
+        let displayed = comics
+        let downloaded = store.downloadedComicKeys
+        let running = Set(store.jobs.lazy.filter { $0.owner == store.account && $0.state.isRunning }.map { DownloadCatalog.key($0.comic) })
+        return VStack(spacing: 0) {
             ScrollViewReader { reader in
             ScrollView {
                 LazyVStack(spacing: 9) {
                     Color.clear.frame(height: 0).id("libraryTop")
-                    if comics.isEmpty {
+                    if displayed.isEmpty {
                         emptyLibrary
                     }
-                    ForEach(comics) { comic in comicRow(comic) }
+                    ForEach(displayed) { comic in
+                        let key = DownloadCatalog.key(comic)
+                        comicRow(comic, isDownloaded: downloaded.contains(key), isRunning: running.contains(key))
+                    }
                     if globalSearch && searchState.page > 0 {
                             Button("加载更多") { store.search(submittedQuery, page: searchState.page + 1, scope: searchScope) }.disabled(searchState.searching)
                     }
@@ -371,7 +383,7 @@ private struct LibraryModuleView: View {
             }
         }.frame(maxWidth: .infinity).padding(.vertical, 20)
     }
-    private func comicRow(_ comic: Comic) -> some View {
+    private func comicRow(_ comic: Comic, isDownloaded: Bool, isRunning: Bool) -> some View {
         HStack(spacing: 10) {
             if mode != .none { checkmark(comic.id) }
             Button { if mode != .none { toggle(comic.id) } else { previewComic = comic } } label: {
@@ -384,10 +396,10 @@ private struct LibraryModuleView: View {
             }
             Spacer(minLength: 0)
             if mode == .none {
-                if store.isDownloaded(comic) {
+                if isDownloaded {
                     Image(systemName: "checkmark.circle.fill").font(.title2).foregroundStyle(.green)
                         .accessibilityLabel("已下载 \(comic.title)").accessibilityIdentifier("downloaded-" + comic.id)
-                } else if store.jobs.contains(where: { $0.owner == store.account && $0.comic.source == comic.source && $0.comic.id == comic.id && $0.state.isRunning }) {
+                } else if isRunning {
                     ProgressView().controlSize(.regular).frame(width: 28, height: 28)
                         .accessibilityLabel("正在下载 " + comic.title).accessibilityIdentifier("downloading-" + comic.id)
                 } else {
@@ -431,19 +443,20 @@ private struct LibraryModuleView: View {
         }.padding(.vertical, 6)
     }
     private var queuePane: some View {
-        VStack(spacing: 0) {
+        let displayed = tasks
+        return VStack(spacing: 0) {
             ScrollViewReader { reader in
             ScrollView {
                 LazyVStack(spacing: 10) {
                     Color.clear.frame(height: 0).id("queueTop")
-                    if tasks.isEmpty {
+                    if displayed.isEmpty {
                         VStack(spacing: 10) {
                             Image(systemName: "tray.and.arrow.down").font(.largeTitle).foregroundStyle(.tertiary)
                             Text("下载队列空空的").font(.subheadline.weight(.medium))
                             Text("选一本漫画开始，进度会显示在这里").font(.caption).foregroundStyle(.secondary)
                         }.frame(maxWidth: .infinity).padding(.vertical, 30)
                     }
-                    ForEach(tasks) { job in jobRow(job) }
+                    ForEach(displayed) { job in jobRow(job) }
                 }.padding(.horizontal, layout.sideInset).padding(.bottom, 100 + bottomInset)
             }.scrollIndicators(.hidden).appHideBottomEdgeEffect()
                 .onChangeCompat(of: pageState.scrollToTopRequest) { _, _ in
@@ -569,7 +582,13 @@ private struct LibraryModuleView: View {
         store.search(value, scope: searchScope)
     }
     private func beginSelection(_ value: SelectionMode) { withAnimation(.appTransition) { mode = value; selected = [] } }
-    private func endSelection() { withAnimation(.appTransition) { mode = .none; selected = [] } }
+    private func endSelection() {
+        guard mode != .none || !selected.isEmpty else { return }
+        withAnimation(.appTransition) {
+            if mode != .none { mode = .none }
+            if !selected.isEmpty { selected = [] }
+        }
+    }
 }
 
 private struct ComicConfirmationPopover: View {
@@ -678,6 +697,29 @@ private struct ComicCardStyle: ViewModifier {
             .overlay { RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .strokeBorder(Color.primary.opacity(colorScheme == .dark ? 0.14 : 0.06), lineWidth: 0.7)
                 .allowsHitTesting(false) }
+    }
+}
+
+// Keep notice-only state out of ContentView so remembering the previous page
+// does not invalidate the native pager a second time during its transition.
+@MainActor private struct FloatingLibraryNotice: View {
+    let store: AppStore
+    let favorites: LibraryPageState
+    let recommendations: LibraryPageState
+    let tab: LibraryTab
+    let onLogs: () -> Void
+    @State private var lastNoticeTab: LibraryTab = .favorites
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        SharedLibraryNotice(store: store, favorites: favorites, recommendations: recommendations,
+                            tab: tab == .preview ? lastNoticeTab : tab, isVisible: tab != .preview, onLogs: onLogs)
+            .opacity(tab == .preview ? 0 : 1)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.24), value: tab == .preview)
+            .allowsHitTesting(tab != .preview)
+            .accessibilityHidden(tab == .preview)
+            .onChangeCompat(of: tab) { _, page in
+                if page != .preview && lastNoticeTab != page { lastNoticeTab = page }
+            }
     }
 }
 
@@ -811,9 +853,9 @@ struct CoverView: View {
                 }
                 #endif
                 do {
-                    let data = try await CoverCache.shared.load(comic: comic, preferences: preferences)
+                    let thumbnail = try await CoverCache.shared.thumbnail(comic: comic, preferences: preferences)
                     try Task.checkCancellation()
-                    image = UIImage(data: data)
+                    image = thumbnail
                 } catch { /* Cover failure does not block the queue. */ }
             }
     }
