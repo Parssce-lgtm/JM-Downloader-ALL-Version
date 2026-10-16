@@ -700,12 +700,12 @@ private struct ComicCardStyle: ViewModifier {
             .contentShape(Capsule())
             .onTapGesture { if tab == .downloads { onLogs() } }
             .modifier(NoticeCapsuleStyle(transparent: true))
-            .accessibilityRepresentation {
-                if isVisible {
-                    if tab == .downloads { Button(message(for: tab), action: onLogs) }
-                    else { Text(message(for: tab)) }
-                }
-            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(message(for: tab))
+            .accessibilityAction { if tab == .downloads { onLogs() } }
+            .accessibilityAddTraits(tab == .downloads ? .isButton : .isStaticText)
+            .accessibilityRemoveTraits(tab == .downloads ? .isStaticText : .isButton)
+            .accessibilityHidden(!isVisible)
             .accessibilityIdentifier("sharedNoticeCapsule")
     }
     private func noticeText(_ page: LibraryTab) -> some View {
