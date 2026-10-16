@@ -289,7 +289,12 @@ final class JMDownloaderUITests: XCTestCase {
         let pager = app.descendants(matching: .any)["libraryPager"].firstMatch
         pager.swipeRight()
         XCTAssertTrue(tabs.buttons["PDF 预览"].isSelected)
-        XCTAssertTrue(notice.waitForDisappearance(timeout: 5))
+        // A persistent SwiftUI view may still exist in XCTest while opacity is zero.
+        // Check the user-facing contract: it cannot receive a tap while hidden.
+        let hidden = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in !notice.isHittable }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [hidden], timeout: 5), .completed)
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: frame.midY)).tap()
+        XCTAssertFalse(app.navigationBars["提示记录"].exists)
         attach(app, name: "pdf-preview-notice-hidden")
         pager.swipeLeft()
         XCTAssertTrue(tabs.buttons["下载任务"].isSelected)
