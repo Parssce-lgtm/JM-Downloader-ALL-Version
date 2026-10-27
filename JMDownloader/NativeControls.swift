@@ -1,0 +1,67 @@
+import SwiftUI
+
+// Keep native controls mounted when unrelated progress values change.
+struct StableControl<Key: Equatable, Content: View>: View, Equatable {
+    let key: Key
+    let content: Content
+    init(key: Key, @ViewBuilder content: () -> Content) {
+        self.key = key; self.content = content()
+    }
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.key == rhs.key }
+    var body: some View { content }
+}
+
+struct LibraryMenuState: Equatable {
+    let page: LibraryTab
+    let mode: SelectionMode
+    let visibility: FavoriteVisibility
+    let showDownloadedRecommendations: Bool
+    let hasSelection: Bool
+    let deletionAnchor: String?
+    let deletionIDs: Set<String>
+}
+
+struct FolderMenuState: Equatable {
+    let selected: String
+    let folders: [String]
+}
+
+struct NativeLibraryPicker: View, Equatable {
+    let options: [LibraryTab]
+    let selected: LibraryTab
+    @Binding var selection: LibraryTab
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.options == rhs.options && lhs.selected == rhs.selected
+    }
+    var body: some View {
+        Picker("浏览类型", selection: $selection) {
+            ForEach(options, id: \.self) { Text($0.rawValue).tag($0) }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .tint(nil)
+        .accessibilityIdentifier("libraryTabs")
+    }
+}
+
+#if DEBUG
+// Baseline for comparing the platform's own pressed/dragged appearance.
+struct NativePickerReferenceView: View {
+    @State private var selection: LibraryTab = .favorites
+    var body: some View {
+        NavigationStack {
+            VStack {
+                Picker("浏览类型", selection: $selection) {
+                    ForEach([LibraryTab.downloads, .favorites, .recommendations], id: \.self) {
+                        Text($0.rawValue).tag($0)
+                    }
+                }.pickerStyle(.segmented).labelsHidden().tint(nil)
+                    .accessibilityIdentifier("libraryTabs")
+                Spacer()
+            }.padding(.horizontal, 16)
+                .background(Color(uiColor: .systemGroupedBackground))
+                .navigationTitle("系统控件对照").navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+#endif

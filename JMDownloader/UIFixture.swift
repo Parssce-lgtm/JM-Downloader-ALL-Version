@@ -7,6 +7,39 @@ extension AppStore {
         clients[account] = FixtureAPI()
         preferences.tagBlacklist = "AI"
         if ProcessInfo.processInfo.arguments.contains("--dark-fixture") { preferences.appearance = "深色" }
+        if ProcessInfo.processInfo.arguments.contains("--pdf-reader-fixture") {
+            preferences.previewEnabled = true
+            let url = DiskStore.documents.appendingPathComponent("连续阅读检查 [JMComic 90001].pdf")
+            try? FileManager.default.createDirectory(at: DiskStore.documents, withIntermediateDirectories: true)
+            let format = UIGraphicsPDFRendererFormat()
+            format.documentInfo = [kCGPDFContextTitle as String: "连续阅读检查"]
+            try? UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 240, height: 360), format: format).writePDF(to: url) { context in
+                for (index, size) in [CGSize(width: 240, height: 360), CGSize(width: 240, height: 480), CGSize(width: 360, height: 240), CGSize(width: 240, height: 360)].enumerated() {
+                    let bounds = CGRect(origin: .zero, size: size)
+                    context.beginPage(withBounds: bounds, pageInfo: [:])
+                    [UIColor.systemRed, .systemGreen, .systemBlue, .systemYellow][index].setFill()
+                    context.cgContext.fill(bounds)
+                }
+            }
+        }
+        if ProcessInfo.processInfo.arguments.contains("--menu-progress-fixture") {
+            Task { [weak self] in
+                // Let the UI test open the native menu before changing progress.
+                try? await Task.sleep(for: .seconds(8))
+                guard let self else { return }
+                for burst in 0..<3 {
+                    if burst > 0 { try? await Task.sleep(for: .seconds(8)) }
+                    self.refreshing = true; self.recommending = true
+                    for value in 1...20 {
+                        self.favoriteLoad = .init(stage: "收藏加载检查", fraction: Double(value) / 20, completed: value, total: 20)
+                        self.recommendationLoad = .init(stage: "推荐加载检查", fraction: Double(value) / 20, completed: value, total: 20)
+                        if let id = self.jobs.last?.id { self.change(id) { $0.message = "进度检查 \(value)" } }
+                        try? await Task.sleep(for: .milliseconds(100))
+                    }
+                    self.refreshing = false; self.recommending = false
+                }
+            }
+        }
         var comics = [Comic(id: "10001", title: "已保存的漫画", folders: ["默认收藏"]),
                       Comic(id: "10002", title: "正在下载的漫画", folders: ["默认收藏"]),
                       Comic(id: "10003", title: "等待继续的漫画", folders: ["默认收藏"])]

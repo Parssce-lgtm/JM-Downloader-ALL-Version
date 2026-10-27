@@ -45,14 +45,23 @@ jobs:
           done
           [[ ${#TEST_FLAGS[@]} -gt 0 ]]
           mkdir -p build
-          trap 'xcrun xcresulttool export attachments --path build/Recheck.xcresult --output-path build/screenshots || true' EXIT
           DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); names=[x for k,v in d["devices"].items() if "iOS-26" in k for x in v if x["name"]=="iPhone 17 Pro Max"]; assert names; print(names[0]["udid"])')
           xcrun simctl boot "$DEVICE" 2>/dev/null || true
           xcrun simctl bootstatus "$DEVICE" -b
+          python3 -c 'import time; print(time.time())' >build/video-start.txt
+          xcrun simctl io "$DEVICE" recordVideo --codec=h264 build/NativeControls.mp4 >build/video.log 2>&1 &
+          VIDEO_PID=$!
+          collect_results() {
+            kill -INT "$VIDEO_PID" 2>/dev/null || true
+            wait "$VIDEO_PID" || true
+            swift scripts/export-native-control-frames.swift build/NativeControls.mp4 build/video-start.txt build/Test.log build/control-frames || true
+            xcrun xcresulttool export attachments --path build/Recheck.xcresult --output-path build/screenshots || true
+          }
+          trap collect_results EXIT
           xcodebuild test -project JMDownloader.xcodeproj -scheme JMDownloader \
             -destination "platform=iOS Simulator,id=$DEVICE" -parallel-testing-enabled NO \
             "${TEST_FLAGS[@]}" -derivedDataPath build/DerivedData \
-            -resultBundlePath build/Recheck.xcresult CODE_SIGNING_ALLOWED=NO
+            -resultBundlePath build/Recheck.xcresult CODE_SIGNING_ALLOWED=NO | tee build/Test.log
       - name: Build single unsigned device IPA
         run: bash scripts/build-unsigned-ipa.sh
       - uses: actions/upload-artifact@v4
@@ -63,5 +72,9 @@ jobs:
             build/JM-downloader-unsigned.ipa
             build/Recheck.xcresult
             build/screenshots
+            build/NativeControls.mp4
+            build/control-frames
+            build/Test.log
+            build/video-start.txt
           if-no-files-found: warn
           retention-days: 14

@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 import Combine
 
-enum SelectionMode { case none, download, hide }
+enum SelectionMode: Equatable { case none, download, hide }
 enum LibraryTab: String, CaseIterable { case preview = "PDF 预览", downloads = "下载任务", favorites = "漫画收藏", recommendations = "漫画推荐" }
 
 struct ContentView: View {
@@ -19,9 +19,8 @@ struct ContentView: View {
             GeometryReader { geometry in
             let layout = AppLayout(width: geometry.size.width, height: geometry.size.height)
             VStack(spacing: 10) {
-                Picker("浏览类型", selection: $tab) {
-                    ForEach(visibleTabs, id: \.self) { Text($0.rawValue).tag($0) }
-                }.pickerStyle(.segmented).accessibilityIdentifier("libraryTabs")
+                NativeLibraryPicker(options: visibleTabs, selected: tab, selection: $tab)
+                    .equatable()
                     .padding(.horizontal, layout.sideInset)
                 TabView(selection: $tab) {
                     ForEach(visibleTabs, id: \.self) { item in
@@ -312,44 +311,54 @@ private struct LibraryModuleView: View {
             }
         }.padding(.horizontal, layout.sideInset).padding(.top, 8)
     }
+    private var menuState: LibraryMenuState {
+        LibraryMenuState(page: tab, mode: mode, visibility: pageState.favoriteVisibility,
+                         showDownloadedRecommendations: showDownloadedRecommendations,
+                         hasSelection: !selected.isEmpty, deletionAnchor: deleteAnchor, deletionIDs: deleteIDs)
+    }
     private var controls: some View {
         HStack(spacing: 18) {
             if tab == .recommendations {
                 searchButton
             } else {
                 searchButton
-                Menu {
-                    Button("全部收藏夹") { exitSearch(); folder = "全部收藏夹" }
-                    ForEach(Array(Set(store.favorites.flatMap(\.folders))).sorted(), id: \.self) { item in
-                        Button(item) { exitSearch(); folder = item }
-                    }
-                } label: { Label(folder == "全部收藏夹" ? "收藏夹" : folder, systemImage: "folder").lineLimit(1) }
+                let folders = Array(Set(store.favorites.flatMap(\.folders))).sorted()
+                StableControl(key: FolderMenuState(selected: folder, folders: folders)) {
+                    Menu {
+                        Button("全部收藏夹") { exitSearch(); folder = "全部收藏夹" }
+                        ForEach(folders, id: \.self) { item in
+                            Button(item) { exitSearch(); folder = item }
+                        }
+                    } label: { Label(folder == "全部收藏夹" ? "收藏夹" : folder, systemImage: "folder").lineLimit(1) }
+                }.equatable()
             }
             Spacer(minLength: 0)
-            Menu {
-                AppButton("选择漫画", systemImage: "checkmark.circle") { beginSelection(.download) }
-                if tab == .favorites {
-                    AppButton(mode == .hide ? "关闭隐藏漫画" : "选择隐藏漫画", systemImage: mode == .hide ? "xmark.circle" : "eye.slash") {
-                        if mode == .hide { endSelection() } else { beginSelection(.hide) }
+            StableControl(key: menuState) {
+                Menu {
+                    AppButton("选择漫画", systemImage: "checkmark.circle") { beginSelection(.download) }
+                    if tab == .favorites {
+                        AppButton(mode == .hide ? "关闭隐藏漫画" : "选择隐藏漫画", systemImage: mode == .hide ? "xmark.circle" : "eye.slash") {
+                            if mode == .hide { endSelection() } else { beginSelection(.hide) }
+                        }
+                        Divider()
+                        AppButton("刷新当前列表", systemImage: "arrow.clockwise") { refreshCurrentList() }
+                        AppButton(showDownloadedFavorites ? "隐藏已下载" : "查看已下载", systemImage: "checkmark.circle") {
+                            showDownloadedFavorites.toggle(); endSelection()
+                        }
+                        AppButton(showHiddenFavorites ? "收起隐藏漫画" : "查看隐藏漫画", systemImage: "eye") {
+                            showHiddenFavorites.toggle(); endSelection()
+                        }
+                    } else {
+                        AppButton("刷新列表", systemImage: "arrow.clockwise") { refreshCurrentList() }
+                        Divider()
+                        AppButton(showDownloadedRecommendations ? "隐藏已下载" : "查看已下载", systemImage: "checkmark.circle") {
+                            showDownloadedRecommendations.toggle(); endSelection()
+                        }
                     }
-                    Divider()
-                    AppButton("刷新当前列表", systemImage: "arrow.clockwise") { refreshCurrentList() }
-                    AppButton(showDownloadedFavorites ? "隐藏已下载" : "查看已下载", systemImage: "checkmark.circle") {
-                        showDownloadedFavorites.toggle(); endSelection()
-                    }
-                    AppButton(showHiddenFavorites ? "收起隐藏漫画" : "查看隐藏漫画", systemImage: "eye") {
-                        showHiddenFavorites.toggle(); endSelection()
-                    }
-                } else {
-                    AppButton("刷新列表", systemImage: "arrow.clockwise") { refreshCurrentList() }
-                    Divider()
-                    AppButton(showDownloadedRecommendations ? "隐藏已下载" : "查看已下载", systemImage: "checkmark.circle") {
-                        showDownloadedRecommendations.toggle(); endSelection()
-                    }
-                }
-            } label: { Label("更多", systemImage: "ellipsis.circle") }
-                .accessibilityIdentifier("libraryMore-" + tab.rawValue)
-                .popover(isPresented: deletionBinding("more"), attachmentAnchor: .rect(.bounds)) { deletionContent }
+                } label: { Label("更多", systemImage: "ellipsis.circle") }
+                    .accessibilityIdentifier("libraryMore-" + tab.rawValue)
+                    .popover(isPresented: deletionBinding("more"), attachmentAnchor: .rect(.bounds)) { deletionContent }
+            }.equatable()
 
         }.font(.subheadline.weight(.medium)).foregroundStyle(.primary)
             .frame(minHeight: 36)
@@ -429,15 +438,17 @@ private struct LibraryModuleView: View {
                 AppButton("全部开始", systemImage: "play.fill") { store.startAll() }.accessibilityIdentifier("startAll")
                 Spacer()
                 AppButton("全部暂停", systemImage: "pause.fill") { store.pauseAll() }.accessibilityIdentifier("pauseAll")
-                Menu {
-                    Button("选择任务") { beginSelection(.download) }
-                    Button("删除任务及下载缓存", role: .destructive) {
-                        if mode == .none { beginSelection(.download) }
-                        else if !selected.isEmpty { deleteIDs = selected; deleteAnchor = "queue" }
-                    }.disabled(mode != .none && selected.isEmpty)
-                } label: { Image(systemName: "ellipsis.circle") }
-                .accessibilityLabel("任务操作")
-                .popover(isPresented: deletionBinding("queue"), attachmentAnchor: .rect(.bounds)) { cardActionContent }
+                StableControl(key: menuState) {
+                    Menu {
+                        Button("选择任务") { beginSelection(.download) }
+                        Button("删除任务及下载缓存", role: .destructive) {
+                            if mode == .none { beginSelection(.download) }
+                            else if !selected.isEmpty { deleteIDs = selected; deleteAnchor = "queue" }
+                        }.disabled(mode != .none && selected.isEmpty)
+                    } label: { Image(systemName: "ellipsis.circle") }
+                    .accessibilityLabel("任务操作")
+                    .popover(isPresented: deletionBinding("queue"), attachmentAnchor: .rect(.bounds)) { cardActionContent }
+                }.equatable()
             }.font(.subheadline.weight(.medium))
             if mode != .none { selectionBar }
         }.padding(.vertical, 6)

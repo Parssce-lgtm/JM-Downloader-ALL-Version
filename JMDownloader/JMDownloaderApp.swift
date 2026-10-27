@@ -19,9 +19,18 @@ struct JMDownloaderApp: App {
     private let store = AppStore.shared
     @StateObject private var navigation = AppNavigationState(store: AppStore.shared)
     @Environment(\.scenePhase) private var scenePhase
+    @ViewBuilder private var appContent: some View {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--native-picker-reference") {
+            NativePickerReferenceView()
+        } else { ContentView(store: store, navigation: navigation) }
+        #else
+        ContentView(store: store, navigation: navigation)
+        #endif
+    }
     var body: some Scene {
         WindowGroup {
-            ContentView(store: store, navigation: navigation)
+            appContent
                 .tint(navigation.configuration.preferences.accent)
                 .preferredColorScheme(navigation.configuration.preferences.colorScheme)
                 .task { store.start() }

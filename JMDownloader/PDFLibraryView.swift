@@ -73,16 +73,14 @@ private enum LocalPDFLoader {
         try await Task.detached(priority: .userInitiated) {
             guard let document = CGPDFDocument(url as CFURL), document.isUnlocked,
                   let page = document.page(at: page + 1) else { throw JMError.message("PDF 无法读取，可能已损坏或需要密码。") }
-            let box = page.getBoxRect(.cropBox)
-            guard box.width > 0, box.height > 0 else { throw JMError.message("PDF 页面尺寸无效。") }
-            let rotated = abs(page.rotationAngle) % 180 != 0
-            let ratio = rotated ? box.width / box.height : box.height / box.width
-            let height = max(1, min(6000, Int(CGFloat(width) * ratio)))
-            guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+            let ratio = try PDFPageLayout.aspectRatio(of: page)
+            let pixelWidth = max(1, Int(min(CGFloat(width), 6000 / ratio)))
+            let height = max(1, Int(min(6000, CGFloat(pixelWidth) * ratio)))
+            guard let context = CGContext(data: nil, width: pixelWidth, height: height, bitsPerComponent: 8, bytesPerRow: 0,
                 space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { throw JMError.message("无法创建 PDF 页面预览。") }
             context.setFillColor(CGColor(gray: 1, alpha: 1))
-            context.fill(CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
-            context.concatenate(page.getDrawingTransform(.cropBox, rect: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)), rotate: 0, preserveAspectRatio: true))
+            context.fill(CGRect(x: 0, y: 0, width: CGFloat(pixelWidth), height: CGFloat(height)))
+            context.concatenate(page.getDrawingTransform(.cropBox, rect: CGRect(x: 0, y: 0, width: CGFloat(pixelWidth), height: CGFloat(height)), rotate: 0, preserveAspectRatio: true))
             context.drawPDFPage(page)
             guard let image = context.makeImage() else { throw JMError.message("PDF 页面绘制失败。") }
             return image
@@ -128,9 +126,11 @@ struct PDFLibraryView: View {
             HStack {
                 Button { searchVisible.toggle(); searchFocused = searchVisible } label: { Label("搜索", systemImage: "magnifyingglass") }
                 Spacer()
-                Menu {
-                    Picker("排序", selection: $sort) { ForEach(PDFSort.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
-                } label: { Label("更多", systemImage: "ellipsis.circle") }
+                StableControl(key: sort) {
+                    Menu {
+                        Picker("排序", selection: $sort) { ForEach(PDFSort.allCases, id: \.self) { Text($0.rawValue).tag($0) } }
+                    } label: { Label("更多", systemImage: "ellipsis.circle") }
+                }.equatable()
             }.padding(.horizontal, layout.sideInset)
             if searchVisible {
                 TextField("漫画名、JM 号或 #标签", text: $query).textFieldStyle(.roundedBorder)
@@ -150,14 +150,14 @@ struct PDFLibraryView: View {
                                 PDFPageImage(url: file.url, index: 0, width: 160).frame(width: 48, height: 68).clipped().clipShape(RoundedRectangle(cornerRadius: 8))
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(file.title).font(.headline).lineLimit(2).multilineTextAlignment(.leading)
-                                    Text("\(file.pages) 页 · \(ByteCountFormatter.string(fromByteCount: file.bytes, countStyle: .file))").font(.caption).foregroundStyle(.secondary)
+                                    Text(ByteCountFormatter.string(fromByteCount: file.bytes, countStyle: .file)).font(.caption).foregroundStyle(.secondary)
                                     Text(file.date, style: .date).font(.caption2).foregroundStyle(.secondary)
                                 }
                                 Spacer(minLength: 0)
                                 Image(systemName: "chevron.right").font(.caption)
                             }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
                                 .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24))
-                        }.buttonStyle(.plain)
+                        }.buttonStyle(.plain).accessibilityIdentifier("localPDF-" + file.url.lastPathComponent)
                     }
                     Text("\(visible.count) 个 PDF · 根目录").font(.caption).foregroundStyle(.secondary).padding(.vertical)
                 }.padding(.horizontal, layout.sideInset).padding(.bottom, 48)
@@ -167,16 +167,7 @@ struct PDFLibraryView: View {
             .onChangeCompat(of: scenePhase) { _, phase in if phase == .active { Task { await reload() } } }
             .sheet(item: $opened) { file in
                 NavigationStack {
-                    ScrollView {
-                        LazyVStack(spacing: 8) {
-                            ForEach(0..<file.pages, id: \.self) { index in
-                                VStack {
-                                    PDFPageImage(url: file.url, index: index, width: 1200)
-                                    Text("\(index + 1) / \(file.pages)").font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                        }.padding()
-                    }.navigationTitle(file.title).navigationBarTitleDisplayMode(.inline)
+                    ContinuousPDFReader(url: file.url).navigationTitle(file.title).navigationBarTitleDisplayMode(.inline)
                         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { opened = nil } } }
                 }
             }
@@ -196,6 +187,47 @@ struct PDFLibraryView: View {
     }
 }
 
+private struct ContinuousPDFReader: View {
+    let url: URL
+    @State private var ratios: [CGFloat] = []
+    @State private var failure: String?
+    var body: some View {
+        GeometryReader { geometry in
+            Group {
+                if let failure {
+                    AppEmptyView(failure, systemImage: "doc.richtext")
+                } else if ratios.isEmpty {
+                    ProgressView("正在读取 PDF…").frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(ratios.indices, id: \.self) { index in
+                                PDFPageImage(url: url, index: index, width: 1200)
+                                    // The placeholder and rendered page share exactly the same
+                                    // height, including when an offscreen bitmap is released.
+                                    .frame(width: geometry.size.width, height: geometry.size.width * ratios[index])
+                                    .background(Color.white)
+                                    .accessibilityElement(children: .ignore)
+                                    .accessibilityLabel("漫画页面")
+                                    .accessibilityIdentifier("pdfReaderPage-\(index)")
+                            }
+                        }
+                    }.scrollIndicators(.hidden).accessibilityIdentifier("pdfContinuousReader")
+                }
+            }
+        }.background(Color.white)
+            .task(id: url) {
+                do {
+                    let pages = try await PDFPageLayout.aspectRatios(url: url)
+                    try Task.checkCancellation()
+                    ratios = pages
+                }
+                catch is CancellationError { }
+                catch { failure = error.localizedDescription }
+            }
+    }
+}
+
 private struct PDFPageImage: View {
     let url: URL
     let index: Int
@@ -207,7 +239,7 @@ private struct PDFPageImage: View {
             if let image { Image(decorative: image, scale: 1).resizable().scaledToFit() }
             else if let failure { Text(failure).font(.caption).foregroundStyle(.secondary).padding() }
             else { ProgressView().frame(maxWidth: .infinity, minHeight: 64) }
-        }.task(id: url.path + ":\(index)") {
+        }.task(id: url.path + ":\(index):\(width)") {
             do {
                 let rendered = try await LocalPDFLoader.image(url: url, page: index, width: width)
                 try Task.checkCancellation()
