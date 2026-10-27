@@ -12,6 +12,7 @@ struct StableControl<Key: Equatable, Content: View>: View, Equatable {
 }
 
 struct LibraryMenuState: Equatable {
+    let pageOwner: ObjectIdentifier
     let page: LibraryTab
     let mode: SelectionMode
     let visibility: FavoriteVisibility
@@ -22,6 +23,7 @@ struct LibraryMenuState: Equatable {
 }
 
 struct FolderMenuState: Equatable {
+    let pageOwner: ObjectIdentifier
     let selected: String
     let folders: [String]
 }

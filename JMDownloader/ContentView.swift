@@ -312,7 +312,7 @@ private struct LibraryModuleView: View {
         }.padding(.horizontal, layout.sideInset).padding(.top, 8)
     }
     private var menuState: LibraryMenuState {
-        LibraryMenuState(page: tab, mode: mode, visibility: pageState.favoriteVisibility,
+        LibraryMenuState(pageOwner: ObjectIdentifier(pageState), page: tab, mode: mode, visibility: pageState.favoriteVisibility,
                          showDownloadedRecommendations: showDownloadedRecommendations,
                          hasSelection: !selected.isEmpty, deletionAnchor: deleteAnchor, deletionIDs: deleteIDs)
     }
@@ -323,7 +323,7 @@ private struct LibraryModuleView: View {
             } else {
                 searchButton
                 let folders = Array(Set(store.favorites.flatMap(\.folders))).sorted()
-                StableControl(key: FolderMenuState(selected: folder, folders: folders)) {
+                StableControl(key: FolderMenuState(pageOwner: ObjectIdentifier(pageState), selected: folder, folders: folders)) {
                     Menu {
                         Button("全部收藏夹") { exitSearch(); folder = "全部收藏夹" }
                         ForEach(folders, id: \.self) { item in
