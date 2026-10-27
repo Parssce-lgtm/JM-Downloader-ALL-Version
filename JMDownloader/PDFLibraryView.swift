@@ -89,7 +89,8 @@ private enum LocalPDFLoader {
 }
 
 struct PDFLibraryView: View {
-    @ObservedObject var store: AppStore
+    // Files and reader state change through explicit reloads, not download ticks.
+    let store: AppStore
     @Environment(\.appLayout) private var layout
     @Environment(\.scenePhase) private var scenePhase
     @State private var files: [LocalPDF] = []
@@ -122,7 +123,8 @@ struct PDFLibraryView: View {
         }
     }
     var body: some View {
-        VStack(spacing: 10) {
+        let displayed = visible
+        return VStack(spacing: 10) {
             HStack {
                 Button { searchVisible.toggle(); searchFocused = searchVisible } label: { Label("搜索", systemImage: "magnifyingglass") }
                 Spacer()
@@ -140,11 +142,11 @@ struct PDFLibraryView: View {
             ScrollView {
                 LazyVStack(spacing: 10) {
                     if loading && files.isEmpty { ProgressView("正在读取 PDF…").padding(32) }
-                    else if visible.isEmpty {
+                    else if displayed.isEmpty {
                         AppEmptyView(failure ?? (query.isEmpty ? "这里还没有 PDF" : "没有匹配的 PDF"), systemImage: "doc.richtext",
                             description: Text(query.isEmpty ? "将 PDF 放入软件文件根目录，无需新建文件夹。" : "标签搜索必须以 # 开头；无标签元数据的 PDF 可按漫画名或 JM 号搜索。"))
                     }
-                    ForEach(visible) { file in
+                    ForEach(displayed) { file in
                         Button { opened = file } label: {
                             HStack(spacing: 12) {
                                 PDFPageImage(url: file.url, index: 0, width: 160).frame(width: 48, height: 68).clipped().clipShape(RoundedRectangle(cornerRadius: 8))
@@ -159,7 +161,7 @@ struct PDFLibraryView: View {
                                 .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 24))
                         }.buttonStyle(.plain).accessibilityIdentifier("localPDF-" + file.url.lastPathComponent)
                     }
-                    Text("\(visible.count) 个 PDF · 根目录").font(.caption).foregroundStyle(.secondary).padding(.vertical)
+                    Text("\(displayed.count) 个 PDF · 根目录").font(.caption).foregroundStyle(.secondary).padding(.vertical)
                 }.padding(.horizontal, layout.sideInset).padding(.bottom, 48)
             }.scrollIndicators(.hidden).refreshable { await reload() }
         }.padding(.top, 8).scrollDismissesKeyboard(.interactively)
@@ -169,7 +171,7 @@ struct PDFLibraryView: View {
                 NavigationStack {
                     ContinuousPDFReader(url: file.url).navigationTitle(file.title).navigationBarTitleDisplayMode(.inline)
                         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { opened = nil } } }
-                }
+                }.interactiveDismissDisabled()
             }
     }
     @MainActor private func reload() async {
