@@ -70,21 +70,7 @@ private enum LocalPDFLoader {
     }
 
     static func image(url: URL, page: Int, width: Int) async throws -> CGImage {
-        try await Task.detached(priority: .userInitiated) {
-            guard let document = CGPDFDocument(url as CFURL), document.isUnlocked,
-                  let page = document.page(at: page + 1) else { throw JMError.message("PDF 无法读取，可能已损坏或需要密码。") }
-            let ratio = try PDFPageLayout.aspectRatio(of: page)
-            let pixelWidth = max(1, Int(min(CGFloat(width), 6000 / ratio)))
-            let height = max(1, Int(min(6000, CGFloat(pixelWidth) * ratio)))
-            guard let context = CGContext(data: nil, width: pixelWidth, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { throw JMError.message("无法创建 PDF 页面预览。") }
-            context.setFillColor(CGColor(gray: 1, alpha: 1))
-            context.fill(CGRect(x: 0, y: 0, width: CGFloat(pixelWidth), height: CGFloat(height)))
-            context.concatenate(page.getDrawingTransform(.cropBox, rect: CGRect(x: 0, y: 0, width: CGFloat(pixelWidth), height: CGFloat(height)), rotate: 0, preserveAspectRatio: true))
-            context.drawPDFPage(page)
-            guard let image = context.makeImage() else { throw JMError.message("PDF 页面绘制失败。") }
-            return image
-        }.value
+        try await PDFPageLayout.image(url: url, page: page, width: width)
     }
 }
 

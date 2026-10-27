@@ -11,15 +11,17 @@ extension AppStore {
             preferences.previewEnabled = true
             let url = DiskStore.documents.appendingPathComponent("连续阅读检查 [JMComic 90001].pdf")
             try? FileManager.default.createDirectory(at: DiskStore.documents, withIntermediateDirectories: true)
-            let format = UIGraphicsPDFRendererFormat()
-            format.documentInfo = [kCGPDFContextTitle as String: "连续阅读检查"]
-            try? UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 240, height: 360), format: format).writePDF(to: url) { context in
+            var media = CGRect(x: 0, y: 0, width: 240, height: 360)
+            if let context = CGContext(url as CFURL, mediaBox: &media, [kCGPDFContextTitle: "连续阅读检查"] as CFDictionary) {
                 for (index, size) in [CGSize(width: 240, height: 360), CGSize(width: 240, height: 480), CGSize(width: 360, height: 240), CGSize(width: 240, height: 360)].enumerated() {
-                    let bounds = CGRect(origin: .zero, size: size)
-                    context.beginPage(withBounds: bounds, pageInfo: [:])
-                    [UIColor.systemRed, .systemGreen, .systemBlue, .systemYellow][index].setFill()
-                    context.cgContext.fill(bounds)
+                    var bounds = CGRect(origin: .zero, size: size)
+                    let box = Data(bytes: &bounds, count: MemoryLayout<CGRect>.size)
+                    context.beginPDFPage([kCGPDFContextMediaBox: box] as CFDictionary)
+                    context.setFillColor([UIColor.systemRed, .systemGreen, .systemBlue, .systemYellow][index].cgColor)
+                    context.fill(bounds)
+                    context.endPDFPage()
                 }
+                context.closePDF()
             }
         }
         if ProcessInfo.processInfo.arguments.contains("--menu-progress-fixture") {

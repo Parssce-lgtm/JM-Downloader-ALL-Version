@@ -25,6 +25,27 @@ final class PDFPageLayoutTests: XCTestCase {
         let rotated = try await PDFPageLayout.aspectRatios(url: url)
         XCTAssertEqual(rotated[0], 2.0 / 3, accuracy: 0.001)
     }
+    func testNativeRendererFillsThePageAndKeepsPixelBounds() async throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".pdf")
+        defer { try? FileManager.default.removeItem(at: url) }
+        var media = CGRect(x: 0, y: 0, width: 240, height: 360)
+        let writer = try XCTUnwrap(CGContext(url as CFURL, mediaBox: &media, nil))
+        writer.beginPDFPage(nil)
+        writer.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+        writer.fill(media); writer.endPDFPage(); writer.closePDF()
+        let image = try await PDFPageLayout.image(url: url, page: 0, width: 400)
+        XCTAssertEqual(image.width, 400); XCTAssertEqual(image.height, 600)
+        for (x, y) in [(20, 30), (380, 30), (20, 570), (380, 570)] {
+            let pixel = try XCTUnwrap(image.cropping(to: CGRect(x: x, y: y, width: 1, height: 1)))
+            let buffer = try XCTUnwrap(CGContext(data: nil, width: 1, height: 1, bitsPerComponent: 8,
+                bytesPerRow: 4, space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue))
+            buffer.draw(pixel, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+            let bytes = try XCTUnwrap(buffer.data).assumingMemoryBound(to: UInt8.self)
+            XCTAssertGreaterThan(bytes[0], 200)
+            XCTAssertLessThan(bytes[1], 40); XCTAssertLessThan(bytes[2], 40)
+        }
+    }
     func testUnreadableDocumentReturnsAnError() async throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".pdf")
         try Data("not a PDF".utf8).write(to: url)
