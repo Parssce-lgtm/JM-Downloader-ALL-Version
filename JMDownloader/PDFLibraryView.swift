@@ -305,7 +305,7 @@ struct PDFExclusionsSection: View {
                             }.font(.caption).buttonStyle(.borderless).accessibilityIdentifier("restorePDF-" + record.id)
                         }
                     }
-                }.padding(.vertical, 4).accessibilityIdentifier("excludedPDF-" + record.id)
+                }.padding(.vertical, 4)
             }
         } header: { Text("PDF 预览 · 不喜欢 · \(library.exclusions.count)") } footer: {
             Text("PDF 名单保存在本机。取消排除后，仍存在的源 PDF 会重新显示；已删除的源文件不会恢复。")
