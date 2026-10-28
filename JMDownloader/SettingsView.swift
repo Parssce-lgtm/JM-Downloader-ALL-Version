@@ -31,7 +31,7 @@ struct SettingsView: View {
                         .accessibilityIdentifier("developerSettings")
                 }
                 Section("关于") {
-                    LabeledContent("版本", value: "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.8.0") (Build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "27"))")
+                    LabeledContent("版本", value: "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.8.0") (Build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "28"))")
                     LabeledContent("系统", value: AppAppearance.systemDescription)
                     NavigationLink("第三方许可") {
                         ScrollView {
@@ -222,6 +222,8 @@ struct AccountSettingsView: View {
 
 struct ComicSettingsView: View {
     @ObservedObject var store: AppStore
+    @ObservedObject private var pdfLibrary: LocalPDFLibraryState
+    init(store: AppStore) { self.store = store; pdfLibrary = store.pdfLibrary }
     var body: some View {
         List {
             Section {
@@ -254,7 +256,8 @@ struct ComicSettingsView: View {
             } header: { Text("已排除/隐藏 · \(store.restrictedComics.count)") } footer: {
                 Text("名单按账号保存。小眼睛表示收藏中已隐藏，倒赞表示不喜欢；已排除的漫画不会自动下载。取消排除会同时解除该漫画的排除和隐藏。封面仅作缩略预览。")
             }
-        }.overlay { if store.restrictedComics.isEmpty { AppEmptyView("暂无排除或隐藏漫画", systemImage: "eye.slash", description: Text("可隐藏收藏漫画，或在推荐中选择不喜欢")) } }
+            if !pdfLibrary.exclusions.isEmpty { PDFExclusionsSection(library: pdfLibrary, accent: store.preferences.accent) }
+        }.overlay { if store.restrictedComics.isEmpty && pdfLibrary.exclusions.isEmpty { AppEmptyView("暂无排除或隐藏漫画", systemImage: "eye.slash", description: Text("可隐藏收藏漫画，或在推荐、PDF 预览中选择不喜欢")) } }
             .navigationTitle("已排除/隐藏").navigationBarTitleDisplayMode(.inline).tint(store.preferences.accent)
     }
 }

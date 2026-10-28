@@ -602,7 +602,7 @@ private struct LibraryModuleView: View {
     }
 }
 
-private struct ComicConfirmationPopover: View {
+struct ComicConfirmationPopover: View {
     let title: String
     let message: String
     let tint: Color

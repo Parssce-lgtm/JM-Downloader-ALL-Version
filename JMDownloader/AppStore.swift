@@ -90,6 +90,7 @@ final class AppStore: ObservableObject {
     private var progressRevision = UUID()
     private var lastPersistenceError: String?
     private let inMemoryCaching: Bool
+    let pdfLibrary: LocalPDFLibraryState
     private var tagCaches: [String: ComicTagCache] = [:]
     private var lastRecommendationProgress = Date.distantPast
     private func tagCache(for owner: String) -> ComicTagCache {
@@ -160,6 +161,16 @@ final class AppStore: ObservableObject {
     }
     init(inMemory: Bool = false, snapshotWriter: ((AppSnapshot) throws -> Void)? = nil) {
         inMemoryCaching = inMemory
+        var pdfStateURL: URL? = inMemory ? nil : DiskStore.root.appendingPathComponent("pdf-library.json")
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--pdf-menu-fixture") {
+            pdfStateURL = DiskStore.root.appendingPathComponent("pdf-menu-fixture.json")
+            if ProcessInfo.processInfo.arguments.contains("--reset-pdf-menu-fixture") {
+                try? FileManager.default.removeItem(at: pdfStateURL!)
+            }
+        }
+        #endif
+        pdfLibrary = LocalPDFLibraryState(persistenceURL: pdfStateURL)
         persistence = SnapshotPersistence(writer: snapshotWriter ?? (inMemory ? { _ in } : DiskStore.save))
         background.store = self
         if inMemory { engine.store = self; return }

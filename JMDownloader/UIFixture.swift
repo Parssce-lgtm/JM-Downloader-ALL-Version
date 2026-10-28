@@ -7,6 +7,20 @@ extension AppStore {
         clients[account] = FixtureAPI()
         preferences.tagBlacklist = "AI"
         if ProcessInfo.processInfo.arguments.contains("--dark-fixture") { preferences.appearance = "深色" }
+        if ProcessInfo.processInfo.arguments.contains("--pdf-menu-fixture") {
+            preferences.previewEnabled = true
+            if ProcessInfo.processInfo.arguments.contains("--reset-pdf-menu-fixture") {
+                try? FileManager.default.createDirectory(at: DiskStore.documents, withIntermediateDirectories: true)
+                for (title, id) in [("本地保留检查", "91001"), ("本地删除检查", "91002"), ("本地组合检查", "91003")] {
+                    let url = DiskStore.documents.appendingPathComponent("\(title) [JMComic \(id)].pdf")
+                    var bounds = CGRect(x: 0, y: 0, width: 240, height: 360)
+                    if let writer = CGContext(url as CFURL, mediaBox: &bounds, [kCGPDFContextTitle: title] as CFDictionary) {
+                        writer.beginPDFPage(nil); writer.setFillColor(UIColor.systemBlue.cgColor)
+                        writer.fill(bounds); writer.endPDFPage(); writer.closePDF()
+                    }
+                }
+            }
+        }
         if ProcessInfo.processInfo.arguments.contains("--pdf-reader-fixture") {
             preferences.previewEnabled = true
             let url = DiskStore.documents.appendingPathComponent("连续阅读检查 [JMComic 90001].pdf")
