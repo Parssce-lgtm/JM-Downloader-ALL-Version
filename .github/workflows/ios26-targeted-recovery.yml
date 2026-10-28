@@ -2,6 +2,11 @@ name: Focused iOS 26 checks and unified IPA
 on:
   workflow_dispatch:
     inputs:
+      runner_image:
+        description: macOS pool with Xcode 26 and iOS 26 simulators
+        type: choice
+        default: macos-26
+        options: [macos-26, macos-15]
       source_ref:
         description: Frozen source commit to verify and build
         required: true
@@ -19,7 +24,7 @@ permissions:
 jobs:
   recover:
     name: iOS 26 targeted recheck and unified IPA
-    runs-on: macos-26
+    runs-on: ${{ inputs.runner_image || 'macos-26' }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
