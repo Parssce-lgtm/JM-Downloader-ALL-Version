@@ -6,7 +6,7 @@ final class NativeControlsPDFTests: XCTestCase {
         for dark in [false, true] {
             let app = XCUIApplication()
             app.launchArguments = ["--ui-fixture-v120", "--pdf-reader-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
-            if dark { app.launchArguments += ["--dark-fixture"] }
+            app.launchArguments += [dark ? "--dark-fixture" : "--light-fixture"]
             app.launch()
             let tabs = app.segmentedControls["libraryTabs"]
             XCTAssertTrue(tabs.waitForExistence(timeout: 15))
@@ -121,6 +121,11 @@ final class NativeControlsPDFTests: XCTestCase {
             left.press(forDuration: 0.3, thenDragTo: right, withVelocity: .slow, thenHoldForDuration: 2)
             XCTAssertTrue(tabs.buttons["漫画推荐"].isSelected)
             capture(app, reference ? "reference-dark-picker-drag-end" : "app-dark-picker-drag-end")
+            let selected = tabs.buttons["漫画推荐"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            print("CONTROL_CAPTURE \(reference ? "selected-reference" : "selected-app") \(Date().timeIntervalSince1970) 6")
+            selected.press(forDuration: 0.3, thenDragTo: left, withVelocity: .slow, thenHoldForDuration: 2)
+            XCTAssertTrue(tabs.buttons["下载任务"].isSelected)
+            capture(app, reference ? "reference-selected-drag-end" : "app-selected-drag-end")
             app.terminate()
         }
     }

@@ -6,6 +6,7 @@ extension AppStore {
         account = "preview"
         clients[account] = FixtureAPI()
         preferences.tagBlacklist = "AI"
+        if ProcessInfo.processInfo.arguments.contains("--light-fixture") { preferences.appearance = "浅色" }
         if ProcessInfo.processInfo.arguments.contains("--dark-fixture") { preferences.appearance = "深色" }
         if ProcessInfo.processInfo.arguments.contains("--pdf-menu-fixture") {
             preferences.previewEnabled = true
