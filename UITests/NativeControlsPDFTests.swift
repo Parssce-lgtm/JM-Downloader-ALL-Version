@@ -15,7 +15,7 @@ final class NativeControlsPDFTests: XCTestCase {
             XCTAssertTrue(file.waitForExistence(timeout: 10)); file.tap()
             let scroll = app.scrollViews["pdfContinuousReader"]
             XCTAssertTrue(scroll.waitForExistence(timeout: 10))
-            let bar = app.navigationBars["连续阅读检查"]
+            let bar = app.navigationBars.containing(.button, identifier: "完成").firstMatch
             XCTAssertTrue(bar.waitForExistence(timeout: 5))
             capture(app, dark ? "pdf-dark-native-header" : "pdf-light-native-header")
             // Average the navigation bar, rather than reading an app-provided
