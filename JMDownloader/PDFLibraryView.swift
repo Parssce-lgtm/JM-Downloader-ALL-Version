@@ -152,14 +152,20 @@ struct PDFLibraryView: View {
                 Button("好", role: .cancel) { actionFailure = nil }
             } message: { Text(actionFailure ?? "") }
             .sheet(item: $sheet) { content in
+                Group {
                 switch content {
                 case .reader(let file):
                 NavigationStack {
                     ContinuousPDFReader(url: file.url).navigationTitle(file.title).navigationBarTitleDisplayMode(.inline)
+                        .toolbarBackground(.background, for: .navigationBar)
+                        .toolbarBackground(.visible, for: .navigationBar)
+                        .toolbarColorScheme(store.preferences.colorScheme, for: .navigationBar)
                         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { sheet = nil } } }
-                }.interactiveDismissDisabled()
+                }.presentationDragIndicator(.visible)
                 case .details(let file): PDFCoverDetails(file: file)
                 }
+                }.preferredColorScheme(store.preferences.colorScheme)
+                    .tint(store.preferences.accent)
             }
     }
     private func pdfRow(_ file: LocalPDF) -> some View {
@@ -344,7 +350,7 @@ private struct ContinuousPDFReader: View {
                     }.scrollIndicators(.hidden).accessibilityIdentifier("pdfContinuousReader")
                 }
             }
-        }.background(Color.white)
+        }.background(.background)
             .task(id: url) {
                 do {
                     let pages = try await PDFPageLayout.aspectRatios(url: url)

@@ -19,8 +19,12 @@ struct ContentView: View {
             GeometryReader { geometry in
             let layout = AppLayout(width: geometry.size.width, height: geometry.size.height)
             VStack(spacing: 10) {
-                NativeLibraryPicker(options: visibleTabs, selected: tab, selection: $tab)
-                    .equatable()
+                Picker("浏览类型", selection: $tab) {
+                    ForEach(visibleTabs, id: \.self) { Text($0.rawValue).tag($0) }
+                }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .accessibilityIdentifier("libraryTabs")
                     .padding(.horizontal, layout.sideInset)
                 TabView(selection: $tab) {
                     ForEach(visibleTabs, id: \.self) { item in

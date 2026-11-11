@@ -1,6 +1,55 @@
 import XCTest
+import UIKit
 
 final class NativeControlsPDFTests: XCTestCase {
+    @MainActor func testPDFSheetAppearanceAndNativePullToDismiss() {
+        for dark in [false, true] {
+            let app = XCUIApplication()
+            app.launchArguments = ["--ui-fixture-v120", "--pdf-reader-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+            if dark { app.launchArguments += ["--dark-fixture"] }
+            app.launch()
+            let tabs = app.segmentedControls["libraryTabs"]
+            XCTAssertTrue(tabs.waitForExistence(timeout: 15))
+            tabs.buttons["PDF 预览"].tap()
+            let file = app.buttons["localPDF-连续阅读检查 [JMComic 90001].pdf"]
+            XCTAssertTrue(file.waitForExistence(timeout: 10)); file.tap()
+            let scroll = app.scrollViews["pdfContinuousReader"]
+            XCTAssertTrue(scroll.waitForExistence(timeout: 10))
+            let bar = app.navigationBars["连续阅读检查"]
+            XCTAssertTrue(bar.waitForExistence(timeout: 5))
+            capture(app, dark ? "pdf-dark-native-header" : "pdf-light-native-header")
+            // Average the navigation bar, rather than reading an app-provided
+            // flag: this catches a white sheet over an otherwise dark app.
+            let brightness = averageBrightness(bar.screenshot().image)
+            if dark { XCTAssertLessThan(brightness, 0.4) }
+            else { XCTAssertGreaterThan(brightness, 0.6) }
+            scroll.swipeUp()
+            XCTAssertTrue(scroll.exists)
+            // Dismiss from the native top bar, even while the PDF is scrolled.
+            let start = bar.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+            start.press(forDuration: 0.05, thenDragTo: end)
+            expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: scroll)
+            waitForExpectations(timeout: 5)
+            XCTAssertTrue(file.isHittable)
+            file.tap()
+            XCTAssertTrue(scroll.waitForExistence(timeout: 10))
+            app.buttons["完成"].tap()
+            XCTAssertTrue(file.waitForExistence(timeout: 5))
+            app.terminate()
+        }
+    }
+    private func averageBrightness(_ image: UIImage) -> Double {
+        guard let image = image.cgImage else { XCTFail("Missing header image"); return -1 }
+        var pixel = [UInt8](repeating: 0, count: 4)
+        pixel.withUnsafeMutableBytes { bytes in
+            let context = CGContext(data: bytes.baseAddress, width: 1, height: 1, bitsPerComponent: 8,
+                bytesPerRow: 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+            context.interpolationQuality = .high
+            context.draw(image, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+        }
+        return (Double(pixel[0]) + Double(pixel[1]) + Double(pixel[2])) / 765
+    }
     @MainActor func testMoreMenusStayOpenAndKeepTextFramesDuringProgress() {
         for (moduleIndex, module) in ["下载任务", "漫画收藏", "漫画推荐"].enumerated() {
             let app = XCUIApplication()

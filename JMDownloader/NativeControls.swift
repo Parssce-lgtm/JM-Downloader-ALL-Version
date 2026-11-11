@@ -28,24 +28,6 @@ struct FolderMenuState: Equatable {
     let folders: [String]
 }
 
-struct NativeLibraryPicker: View, Equatable {
-    let options: [LibraryTab]
-    let selected: LibraryTab
-    @Binding var selection: LibraryTab
-    static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.options == rhs.options && lhs.selected == rhs.selected
-    }
-    var body: some View {
-        Picker("浏览类型", selection: $selection) {
-            ForEach(options, id: \.self) { Text($0.rawValue).tag($0) }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .tint(nil)
-        .accessibilityIdentifier("libraryTabs")
-    }
-}
-
 #if DEBUG
 // Baseline for comparing the platform's own pressed/dragged appearance.
 struct NativePickerReferenceView: View {
@@ -57,7 +39,7 @@ struct NativePickerReferenceView: View {
                     ForEach([LibraryTab.downloads, .favorites, .recommendations], id: \.self) {
                         Text($0.rawValue).tag($0)
                     }
-                }.pickerStyle(.segmented).labelsHidden().tint(nil)
+                }.pickerStyle(.segmented).labelsHidden()
                     .accessibilityIdentifier("libraryTabs")
                 Spacer()
             }.padding(.horizontal, 16)
