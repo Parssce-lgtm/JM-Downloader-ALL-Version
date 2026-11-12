@@ -6,7 +6,7 @@ final class PDFLibraryMenuTests: XCTestCase {
         let base = ["--ui-fixture-v120", "--pdf-menu-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launchArguments = base + ["--reset-pdf-menu-fixture"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 15)); tabs.buttons["PDF 预览"].tap()
         let keptName = "本地保留检查 [JMComic 91001].pdf"
         let deleteName = "本地删除检查 [JMComic 91002].pdf"

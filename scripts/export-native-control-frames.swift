@@ -9,7 +9,12 @@ import CoreGraphics
 let args = CommandLine.arguments
 if args.count != 5 { fatalError("Expected video, start timestamp, test log, output directory") }
 let asset = AVURLAsset(url: URL(fileURLWithPath: args[1]))
-let start = Double(try String(contentsOfFile: args[2]).trimmingCharacters(in: .whitespacesAndNewlines))!
+let commandStart = Double(try String(contentsOfFile: args[2]).trimmingCharacters(in: .whitespacesAndNewlines))!
+// simctl may wait before writing its first frame. Prefer the movie timestamp;
+// the command timestamp is only an explicitly marked fallback.
+let movieStart = asset.creationDate?.dateValue?.timeIntervalSince1970
+let start = movieStart ?? commandStart
+print("Video alignment: \(movieStart == nil ? "command fallback; verify manually" : "movie creation metadata") \(start)")
 let log = try String(contentsOfFile: args[3])
 let output = URL(fileURLWithPath: args[4], isDirectory: true)
 try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
@@ -27,7 +32,7 @@ for match in regex.matches(in: log, range: NSRange(log.startIndex..., in: log)) 
         let second = max(0, timestamp - start - 0.75 + Double(index) / 4)
         do {
             let full = try generator.copyCGImage(at: CMTime(seconds: second, preferredTimescale: 600), actualTime: nil)
-            let image = name.hasPrefix("pdf") ? full : (full.cropping(to: CGRect(x: 0, y: 0, width: CGFloat(full.width), height: CGFloat(min(full.height, 780)))) ?? full)
+            let image = full
             let url = output.appendingPathComponent(String(format: "%@-%03d.png", name, index))
             if let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) {
                 CGImageDestinationAddImage(destination, image, nil)

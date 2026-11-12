@@ -5,7 +5,7 @@ final class CompatibilityUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 15))
         XCTAssertTrue(tabs.buttons["漫画收藏"].isSelected)
         let from = tabs.buttons["漫画推荐"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
@@ -19,7 +19,7 @@ final class CompatibilityUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "--long-library-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 15))
         XCTAssertGreaterThanOrEqual(tabs.frame.height, 30)
         XCTAssertLessThanOrEqual(tabs.frame.height, 60)
@@ -44,7 +44,7 @@ final class CompatibilityUITests: XCTestCase {
         }
         app.buttons["settings"].tap()
         XCTAssertTrue(app.navigationBars["设置"].waitForExistence(timeout: 5))
-        let version = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "1.8.0 (Build 29)")).firstMatch
+        let version = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "1.8.0 (Build 31)")).firstMatch
         for _ in 0..<3 where !version.exists { app.swipeUp() }
         XCTAssertTrue(version.waitForExistence(timeout: 5))
         for _ in 0..<3 where !app.buttons["comicSettings"].isHittable { app.swipeDown() }
@@ -58,7 +58,7 @@ final class CompatibilityUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "--long-library-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 15))
         app.buttons["openComicSearch"].tap()
         XCTAssertTrue(app.textFields["comicSearchField"].waitForExistence(timeout: 5))
@@ -74,7 +74,7 @@ final class CompatibilityUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 15))
         tabs.buttons["漫画推荐"].tap()
         app.buttons["openComicSearch"].tap()
