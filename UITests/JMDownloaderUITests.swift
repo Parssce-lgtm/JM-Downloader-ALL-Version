@@ -5,7 +5,7 @@ final class JMDownloaderUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "--mixed-download-states-fixture", "--dark-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 10)); tabs.buttons["下载任务"].tap()
         let rows = ["10006", "10002", "10004", "10005"].map { app.descendants(matching: .any)["jobCard-" + $0].firstMatch }
         for row in rows { XCTAssertTrue(row.waitForExistence(timeout: 5)) }
@@ -78,7 +78,7 @@ final class JMDownloaderUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "--long-library-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))
         let favorite = app.descendants(matching: .any)["comicCard-10003"].firstMatch
         XCTAssertTrue(favorite.waitForExistence(timeout: 5))
@@ -107,7 +107,7 @@ final class JMDownloaderUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))
         tabs.buttons["漫画推荐"].tap()
         let comic = app.staticTexts["等待继续的漫画"]
@@ -184,7 +184,7 @@ final class JMDownloaderUITests: XCTestCase {
         attach(app, name: "35-tag-and-title-blacklist")
         app.navigationBars["黑名单"].buttons["BackButton"].tap()
         app.buttons["完成"].tap()
-        app.segmentedControls["libraryTabs"].buttons["漫画推荐"].tap()
+        app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch.buttons["漫画推荐"].tap()
         app.buttons["openComicSearch"].tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         app.textFields["comicSearchField"].typeText("#AI绘图")
@@ -199,7 +199,7 @@ final class JMDownloaderUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "--long-library-fixture", "--progress-stress-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))
         let pager = app.descendants(matching: .any)["libraryPager"].firstMatch
         XCTAssertTrue(pager.exists)
@@ -238,7 +238,7 @@ final class JMDownloaderUITests: XCTestCase {
         notice.tap()
         XCTAssertTrue(app.navigationBars["提示记录"].waitForExistence(timeout: 5))
         app.navigationBars["提示记录"].buttons.firstMatch.tap()
-        XCTAssertTrue(app.segmentedControls["libraryTabs"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch.waitForExistence(timeout: 5))
         app.terminate()
         app.launchArguments += ["--dark-fixture"]
         app.launch()
@@ -257,7 +257,7 @@ final class JMDownloaderUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))
         app.buttons["settings"].tap()
         let developer = app.buttons["developerSettings"]
@@ -328,7 +328,7 @@ final class JMDownloaderUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "--recommendation-stream-fixture", "--long-library-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        app.segmentedControls["libraryTabs"].buttons["漫画推荐"].tap()
+        app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch.buttons["漫画推荐"].tap()
         XCTAssertFalse(app.buttons["recommendationSort"].exists)
         XCTAssertTrue(app.buttons["cover-10003"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["librarySearching"].exists)
@@ -348,16 +348,16 @@ final class JMDownloaderUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "--recommendation-loading-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        XCTAssertTrue(app.segmentedControls["libraryTabs"].waitForExistence(timeout: 10))
-        app.segmentedControls["libraryTabs"].buttons["漫画推荐"].tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch.waitForExistence(timeout: 10))
+        app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch.buttons["漫画推荐"].tap()
         XCTAssertTrue(app.staticTexts["librarySearching"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["librarySearching"].label, "正在搜索…")
         attach(app, name: "20-recommendations-searching")
         app.terminate()
         app.launchArguments = ["--ui-fixture-v120", "--recommendation-failure-fixture", "--dark-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        XCTAssertTrue(app.segmentedControls["libraryTabs"].waitForExistence(timeout: 10))
-        app.segmentedControls["libraryTabs"].buttons["漫画推荐"].tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch.waitForExistence(timeout: 10))
+        app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch.buttons["漫画推荐"].tap()
         XCTAssertTrue(app.staticTexts["libraryFailed"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["libraryFailed"].label, "加载失败")
         XCTAssertFalse(app.staticTexts["libraryDisconnected"].exists)
@@ -366,8 +366,8 @@ final class JMDownloaderUITests: XCTestCase {
         app.terminate()
         app.launchArguments = ["--ui-fixture-v120", "--recommendation-offline-fixture", "--dark-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        XCTAssertTrue(app.segmentedControls["libraryTabs"].waitForExistence(timeout: 10))
-        app.segmentedControls["libraryTabs"].buttons["漫画推荐"].tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch.waitForExistence(timeout: 10))
+        app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch.buttons["漫画推荐"].tap()
         XCTAssertTrue(app.staticTexts["libraryDisconnected"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["libraryDisconnected"].label, "网络已断开")
         XCTAssertFalse(app.staticTexts["libraryFailed"].exists)
@@ -380,9 +380,9 @@ final class JMDownloaderUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "--long-library-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        XCTAssertTrue(app.segmentedControls["libraryTabs"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch.waitForExistence(timeout: 10))
         for module in ["漫画收藏", "漫画推荐"] {
-            app.segmentedControls["libraryTabs"].buttons[module].tap()
+            app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch.buttons[module].tap()
             let scroll = app.scrollViews["libraryScroll-" + module]
             let lastCover = app.buttons["cover-10075"]
             for _ in 0..<20 { if lastCover.isHittable { break }; scroll.swipeUp() }
@@ -403,8 +403,8 @@ final class JMDownloaderUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["--ui-fixture-v120", "--progress-stress-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        XCTAssertTrue(app.segmentedControls["libraryTabs"].waitForExistence(timeout: 10))
-        app.segmentedControls["libraryTabs"].buttons["下载任务"].tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch.waitForExistence(timeout: 10))
+        app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch.buttons["下载任务"].tap()
         let exportLabel = app.staticTexts["jobProgressLabel-10002"]
         XCTAssertTrue(exportLabel.label.hasSuffix("%"))
         XCTAssertFalse(exportLabel.label.contains("/"))
@@ -494,7 +494,7 @@ final class JMDownloaderUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["--ui-fixture-v120", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))
         XCTAssertLessThan(tabs.buttons["下载任务"].frame.minX, tabs.buttons["漫画收藏"].frame.minX)
         XCTAssertFalse(app.descendants(matching: .any)["downloaded-10001"].exists)
@@ -547,7 +547,7 @@ final class JMDownloaderUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["--ui-fixture-v120", "--dark-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))
         let favorite = app.staticTexts["等待继续的漫画"]
         favorite.press(forDuration: 1)
@@ -597,7 +597,7 @@ final class JMDownloaderUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["--ui-fixture-v120", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 10))
         for module in ["漫画收藏", "下载任务", "漫画推荐"] {
             tabs.buttons[module].tap()

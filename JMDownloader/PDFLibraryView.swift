@@ -127,6 +127,8 @@ struct PDFLibraryView: View {
                     } label: { Label("更多", systemImage: "ellipsis.circle") }
                 }.equatable()
             }.padding(.horizontal, layout.sideInset)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("libraryTools-PDF 预览")
             if searchVisible {
                 TextField("漫画名、JM 号或 #标签", text: $query).textFieldStyle(.roundedBorder)
                     .focused($searchFocused).submitLabel(.search).onSubmit { searchFocused = false }

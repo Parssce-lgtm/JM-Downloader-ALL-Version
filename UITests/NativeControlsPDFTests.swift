@@ -8,7 +8,7 @@ final class NativeControlsPDFTests: XCTestCase {
             app.launchArguments = ["--ui-fixture-v120", "--pdf-reader-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
             app.launchArguments += [dark ? "--dark-fixture" : "--light-fixture"]
             app.launch()
-            let tabs = app.segmentedControls["libraryTabs"]
+            let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
             XCTAssertTrue(tabs.waitForExistence(timeout: 15))
             tabs.buttons["PDF 预览"].tap()
             let file = app.buttons["localPDF-连续阅读检查 [JMComic 90001].pdf"]
@@ -55,7 +55,7 @@ final class NativeControlsPDFTests: XCTestCase {
             let app = XCUIApplication()
             app.launchArguments = ["--ui-fixture-v120", "--menu-progress-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
             app.launch()
-            let tabs = app.segmentedControls["libraryTabs"]
+            let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
             XCTAssertTrue(tabs.waitForExistence(timeout: 15))
             tabs.buttons[module].tap()
             let more = module == "下载任务" ? app.buttons["任务操作"] : app.buttons["libraryMore-" + module]
@@ -81,7 +81,7 @@ final class NativeControlsPDFTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture-v120", "--pdf-reader-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
-        let tabs = app.segmentedControls["libraryTabs"]
+        let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 15))
         tabs.buttons["PDF 预览"].tap()
         let file = app.buttons["localPDF-连续阅读检查 [JMComic 90001].pdf"]
@@ -111,7 +111,7 @@ final class NativeControlsPDFTests: XCTestCase {
             app.launchArguments = ["--ui-fixture-v120", "--dark-fixture", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
             if reference { app.launchArguments += ["--native-picker-reference"] }
             app.launch()
-            let tabs = app.segmentedControls["libraryTabs"]
+            let tabs = app.descendants(matching: .any).matching(identifier: "libraryTabs").firstMatch
             XCTAssertTrue(tabs.waitForExistence(timeout: 15))
             XCTAssertTrue(tabs.buttons["漫画收藏"].isSelected)
             capture(app, reference ? "reference-dark-picker-start" : "app-dark-picker-start")

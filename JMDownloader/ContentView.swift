@@ -19,12 +19,7 @@ struct ContentView: View {
             GeometryReader { geometry in
             let layout = AppLayout(width: geometry.size.width, height: geometry.size.height)
             VStack(spacing: 10) {
-                Picker("浏览类型", selection: $tab) {
-                    ForEach(visibleTabs, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .accessibilityIdentifier("libraryTabs")
+                LibraryTabPicker(options: visibleTabs, selection: $tab)
                     .padding(.horizontal, layout.sideInset)
                 TabView(selection: $tab) {
                     ForEach(visibleTabs, id: \.self) { item in
@@ -366,6 +361,8 @@ private struct LibraryModuleView: View {
 
         }.font(.subheadline.weight(.medium)).foregroundStyle(.primary)
             .frame(minHeight: 36)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("libraryTools-" + tab.rawValue)
     }
     private var selectionBar: some View {
         HStack {
@@ -437,7 +434,8 @@ private struct LibraryModuleView: View {
                 Label("漫画下载状态", systemImage: "arrow.down.to.line.compact").font(.headline)
                 Spacer()
                 Text("\(tasks.count) 个任务").font(.caption).foregroundStyle(.secondary)
-            }
+            }.accessibilityElement(children: .contain)
+                .accessibilityIdentifier("libraryTools-下载任务")
             HStack {
                 AppButton("全部开始", systemImage: "play.fill") { store.startAll() }.accessibilityIdentifier("startAll")
                 Spacer()
